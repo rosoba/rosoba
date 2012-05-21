@@ -10,14 +10,13 @@ def index_mapping_node(dNx_mtx):
     dN_idx_map_one = ((0, 1, 1, 0), slice(None))
     print 'dNx_mtx, idx = \n', dNx_mtx[dN_idx_map_one]
      
-    #B_mtx = np.zeros ((3, 2, 4), dtype = 'f')
-    B_mtx = np.arange(24, dtype = 'f').reshape(3, 2, 4)
-    print 'B_mtx - orig\n', B_mtx
-     
-    B_idx_map_one = ((0, 1, 2, 2), (0, 1, 0, 1), slice(None))
-    print 'B_mtx - selection\n', B_mtx[B_idx_map_one]
+    B_mtx = np.zeros ((3, 4, 2), dtype = 'f')
+    B_enum_mtx = np.arange(24, dtype = 'f').reshape(3, 4, 2)
+    B_idx_map_one = ((0, 1, 2, 2), slice(None), (0, 1, 0, 1))
 
-
+    print 'B_mtx - orig\n', B_enum_mtx
+    print 'B_mtx - selection\n', B_enum_mtx[B_idx_map_one]
+    
     B_mtx[B_idx_map_one] = dNx_mtx[dN_idx_map_one]
     
     return B_mtx.reshape(3, 8)
