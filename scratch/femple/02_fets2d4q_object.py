@@ -5,16 +5,16 @@ import numpy as np
 from enthought.traits.api import HasTraits, Array, Tuple, Constant
 import sympy as sp
 
-class FETS2D4Q(HasTraits):
+class FETS2D4Q(object):
     '''Quadratic finite element.
     '''
     
-    dN_idx_map = Constant(value = ([0, 1, 1, 0],
-                                    slice(None)))
-    
-    B_idx_map = Constant(value = ([0, 1, 2, 2],
-                                  slice(None),
-                                  [0, 1, 0, 1]))
+    def __init__(self):
+        self.dN_idx_map = ([0, 1, 1, 0],
+                           slice(None))
+        self.B_idx_map = ([0, 1, 2, 2],
+                          slice(None),
+                          [0, 1, 0, 1])
 
     def get_dN_mtx(self, points):
         '''Return the matrix of global shape functions.

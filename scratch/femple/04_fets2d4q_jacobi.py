@@ -52,13 +52,6 @@ class FETS2D4Q(HasTraits):
         dN_mtx.simplify()
         
         return sp.lambdify([x_, y_], dN_mtx)        
-    
-    def get_dN_mtx(self, points):
-        '''Return the matrix of global shape functions.
-        '''
-        return np.array([[11, 21, 31, 41],
-                         [12, 22, 32, 42]],
-                        dtype = 'f')
         
     def get_B_mtx(self, r, s):
         '''Return kinematic matrix at the given points.
@@ -72,7 +65,14 @@ if __name__ == '__main__':
 
     fets = FETS2D4Q()
     
+    gauss_points = np.array(
+                            [[-0.5777, -0.5777],
+                             [0.5777, -0.5777],
+                             [0.5777, 0.5777],
+                             [-0.5777, 0.5777],
+                    ], dtype = 'f')
+    print 'gp', gauss_points[:, 0]
     print 'dN_fn', fets.dN_fn(0., 0.)
-    print "B_mtx_map = \n", fets.get_B_mtx(0., 0.)
+    print "B_mtx_map = \n", fets.get_B_mtx(gauss_points[:, 0], gauss_points[:, 1])
 
     fets.configure_traits()
