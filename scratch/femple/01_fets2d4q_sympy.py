@@ -1,9 +1,3 @@
-'''
-Created on Apr 23, 2012
-
-@author: rch
-'''
-
 
 import numpy as np
 import sympy as sp
@@ -39,3 +33,7 @@ print dN_fn(-1, -1)
 # Now introduce the kinematics
 
 # Use index operators to define the 
+
+'''
+'''
+
