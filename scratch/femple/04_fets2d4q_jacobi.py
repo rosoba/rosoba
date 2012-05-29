@@ -99,7 +99,7 @@ class FETS2D4Q(HasTraits):
 
 
         B[self.B_idx_map] = b_mtx[self.dN_idx_map]
-
+        
         return B.reshape(3, 8)
     
     
@@ -154,7 +154,7 @@ if __name__ == '__main__':
     #fets = FETS2D4Q()
     
     print fe_grid.elem_dof_map
-    print 
+    print B_mtx
     
     
 
