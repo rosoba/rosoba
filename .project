@@ -3,6 +3,8 @@
 	<name>rosoba</name>
 	<comment></comment>
 	<projects>
+		<project>etsproxy</project>
+		<project>ibvpy</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>
