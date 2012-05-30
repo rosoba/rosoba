@@ -185,7 +185,7 @@ def example_with_new_domain():
 
     # Discretization
     fe_grid1 = FEGrid(coord_max = (1., 1.),
-                      shape = (10, 3),
+                      shape = (1, 1),
                       fets_eval = fets_eval,
                      geo_transform = gt1,
                      level = fe_rg1)
@@ -197,7 +197,7 @@ def example_with_new_domain():
 
     # Discretization
     fe_grid2 = FEGrid(coord_max = (1., 1.),
-                     shape = (10, 3),
+                     shape = (1, 1),
                      fets_eval = fets_eval,
                      geo_transform = gt2,
                      level = fe_rg2)
@@ -210,6 +210,8 @@ def example_with_new_domain():
                        slice = fe_grid1[-1, :, -1, :],
                        link_coeffs = [1.0],
                        link_slice = fe_grid2[0, :, 0, :])
+    print '1', fe_grid1[-1, :, -1, :].dofs
+    print '2', fe_grid2[0, :, 0, :].dofs
     bc_load2 = BCSlice(var = 'u', value = -0.01, dims = [1],
                       slice = fe_grid2[-1, -1, -1, -1 ])
 
