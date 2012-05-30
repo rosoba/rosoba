@@ -38,3 +38,11 @@ print dN_fn(-1, -1)
 '''
 '''
 
+P = [x_ ** 0, x_ ** 1, x_ ** 2]
+PX = sp.lambdify(x_, P, 'numpy')
+
+#sp.vectorize
+x = np.array([1.0, 2.0, 2.0, 3.0])
+print 'values'
+print PX(x)
+
