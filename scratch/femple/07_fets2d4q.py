@@ -7,6 +7,8 @@ from etsproxy.traits.api import \
      Instance, Int, Trait, Str, Enum, Callable, List, TraitDict, Any, \
      on_trait_change, Tuple, WeakRef, Delegate, Property, cached_property, Constant
 
+from ibvpy.fets.fets2D.fets2Dtf import FETS2DTF
+
 import etsproxy.traits.has_traits
 etsproxy.traits.has_traits.CHECK_INTERFACES = 2
 
@@ -24,6 +26,7 @@ from scipy.linalg import \
      inv
 
 from ibvpy.fets.fets_eval import FETSEval
+
 
 #-----------------------------------------------------------------------------------
 # FETS2D4Q - 4 nodes iso-parametric quadrilateral element (2D, linear, Lagrange family)    
@@ -147,11 +150,12 @@ def example_with_new_domain():
         TLine, FEDomain, FERefinementGrid, FEGrid, BCSlice
     from ibvpy.mats.mats2D.mats2D_elastic.mats2D_elastic import MATS2DElastic
     from ibvpy.mats.mats2D.mats2D_sdamage.mats2D_sdamage import MATS2DScalarDamage
-
+  
     from ibvpy.api import BCDofGroup
 
     mats_eval = MATS2DElastic()
     fets_eval = FETS2D4Q(mats_eval = mats_eval)
+
     #fets_eval = FETS2D4Q(mats_eval = MATS2DScalarDamage()) 
 
     from ibvpy.mesh.fe_grid import FEGrid
@@ -166,10 +170,10 @@ def example_with_new_domain():
     L2 = 0.25
     
 
-    alpha = math.pi / 2.0 / 3.0
+    alpha = math.pi / 2.0 /2.0
     d = 0.01
 
-
+    
     def gt1(points):
         x, y = points.T
         x_ = x * -L1
@@ -188,6 +192,15 @@ def example_with_new_domain():
         y_ = y * d
         return np.c_[x_, y_]
     
+    def gt3(points):
+        x, y = points.T
+        x_ = x * -d*math.sin(alpha/2)*2
+        y_ = y 
+        beta = math.pi-math.asin(math.sin(alpha)/(2*math.sin(alpha/2)))
+        T = np.array([[ math.cos(beta), math.sin(beta)],
+                      [ -math.sin(beta), math.cos(beta)]], dtype = 'f')
+
+        return np.dot(np.c_[x_, y_],T)
     
 
     fe_domain = FEDomain()
@@ -211,13 +224,27 @@ def example_with_new_domain():
 
     # Discretization
     fe_grid2 = FEGrid(coord_max = (1., 1.),
-                      shape = (1, 1),
+                      shape = (1,1),
                       fets_eval = fets_eval,
                       geo_transform = gt2,
                       level = fe_rg2)
     
     
-    print 'count dofs', fe_domain.n_dofs
+    fe_rg3 = FERefinementGrid(name = 'rg3',
+                              fets_eval = fets_eval,
+                              domain = fe_domain)
+
+    # Discretization
+    fe_grid3 = FEGrid(coord_min = (0.,1.),
+                      coord_max = (1.,1.),
+                      geo_transform =gt3,
+                      shape = ( 10, 3 ),
+                      fets_eval = fets_eval,
+    
+                      level = fe_rg3,
+                      )
+    #print 'count dofs', fe_domain.n_dofs
+    
 
     bc_fixed = BCSlice(var = 'u', value = 0., dims = [0, 1],
                        slice = fe_grid2[0, :, 0, :])
