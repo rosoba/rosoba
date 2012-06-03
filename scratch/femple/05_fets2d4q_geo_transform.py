@@ -134,20 +134,12 @@ class FETS2D4Q(FETSEval):
 def example_with_new_domain():
     from ibvpy.api import \
         TStepper as TS, RTraceGraph, RTraceDomainListField, \
-        RTraceDomainListInteg, TLoop, \
-        TLine, FEDomain, FERefinementGrid, FEGrid, BCSlice
+        RTraceDomainListInteg, TLoop, TLine, BCSlice, FEGrid, FERefinementGrid, \
+        FEDomain
     from ibvpy.mats.mats2D.mats2D_elastic.mats2D_elastic import MATS2DElastic
-    from ibvpy.mats.mats2D.mats2D_sdamage.mats2D_sdamage import MATS2DScalarDamage
 
-    from ibvpy.api import BCDofGroup
+    fets_eval = FETS2D4Q(mats_eval = MATS2DElastic())
 
-    mats_eval = MATS2DElastic()
-    fets_eval = FETS2D4Q(mats_eval = mats_eval)
-    #fets_eval = FETS2D4Q(mats_eval = MATS2DScalarDamage()) 
-
-    from ibvpy.mesh.fe_grid import FEGrid
-    from ibvpy.mesh.fe_refinement_grid import FERefinementGrid
-    from ibvpy.mesh.fe_domain import FEDomain
     from mathkit.mfn import MFnLineArray
 
     #===========================================================================
@@ -155,7 +147,7 @@ def example_with_new_domain():
     #===========================================================================
     L1 = 0.2
     L2 = 0.2
-    alpha = 0.0 # math.pi / 2.0 / 3.0
+    alpha = math.pi / 2.0 / 3.0
     d = 0.01
 
     def gt1(points):
@@ -185,7 +177,7 @@ def example_with_new_domain():
 
     # Discretization
     fe_grid1 = FEGrid(coord_max = (1., 1.),
-                      shape = (1, 1),
+                      shape = (10, 5),
                       fets_eval = fets_eval,
                      geo_transform = gt1,
                      level = fe_rg1)
@@ -197,7 +189,7 @@ def example_with_new_domain():
 
     # Discretization
     fe_grid2 = FEGrid(coord_max = (1., 1.),
-                     shape = (1, 1),
+                     shape = (10, 5),
                      fets_eval = fets_eval,
                      geo_transform = gt2,
                      level = fe_rg2)
@@ -206,12 +198,13 @@ def example_with_new_domain():
 
     bc_fixed = BCSlice(var = 'u', value = 0., dims = [0, 1],
                        slice = fe_grid1[0, :, 0, :])
-    bc_link12 = BCSlice(var = 'u', value = 0., dims = [0, 1],
-                       slice = fe_grid1[-1, :, -1, :],
-                       link_coeffs = [1.0],
-                       link_slice = fe_grid2[0, :, 0, :])
-    print '1', fe_grid1[-1, :, -1, :].dofs
-    print '2', fe_grid2[0, :, 0, :].dofs
+    bc_link12 = BCSlice(var = 'u',
+                        value = 0.,
+                        dims = [0, 1],
+                        slice = fe_grid1[-1, :, -1, :],
+                        link_coeffs = [1.0, 1.0],
+                        link_dims = [0, 1],
+                        link_slice = fe_grid2[0, :, 0, :])
     bc_load2 = BCSlice(var = 'u', value = -0.01, dims = [1],
                       slice = fe_grid2[-1, -1, -1, -1 ])
 
@@ -220,10 +213,9 @@ def example_with_new_domain():
 
     right_dof = 2
     tstepper = TS(sdomain = fe_domain,
-                   bcond_list = [ bc_fixed, bc_link12,
-                                 #bc_load1,
+                   bcond_list = [bc_fixed,
+                                 bc_link12,
                                  bc_load2,
-                                 #bc_fixed_tmp
                                   ],
          rtrace_list = [
                      RTraceGraph(name = 'Fi,right over u_right (iteration)' ,
@@ -232,13 +224,8 @@ def example_with_new_domain():
                                record_on = 'update'),
                          RTraceDomainListField(name = 'Stress' ,
                          var = 'sig_app', idx = 0,
-                         position = 'int_pnts',
+                         #position = 'int_pnts',
                          record_on = 'update'),
-#                     RTraceDomainListField(name = 'Damage' ,
-#                                    var = 'omega', idx = 0,
-#                
-#                    record_on = 'update',
-#                                    warp = True),
                      RTraceDomainListField(name = 'Displacement' ,
                                     var = 'u', idx = 0,
                                     record_on = 'update',
@@ -251,29 +238,15 @@ def example_with_new_domain():
                                     var = 'strain_energy', idx = 0,
                                     record_on = 'update',
                                     warp = False),
-                                    #                    RTraceDomainListField(name = 'N0' ,
-#                                      var = 'N_mtx', idx = 0,
-#                                      record_on = 'update')
                 ]
             )
 
     # Add the time-loop control
-    #global tloop
     tloop = TLoop(tstepper = tstepper, KMAX = 300, tolerance = 1e-4,
                    tline = TLine(min = 0.0, step = 1.0, max = 1.0))
 
-    #import cProfile
-    #cProfile.run('tloop.eval()', 'tloop_prof' )
-    #print tloop.eval()
-    #import pstats
-    #p = pstats.Stats('tloop_prof')
-    #p.strip_dirs()
-    #print 'cumulative'
-    #p.sort_stats('cumulative').print_stats(20)
-    #print 'time'
-    #p.sort_stats('time').print_stats(20)
-
     tloop.eval()
+
     # Put the whole thing into the simulation-framework to map the
     # individual pieces of definition into the user interface.
     #
