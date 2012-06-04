@@ -36,7 +36,7 @@ def run():
     # Geometry
     #===========================================================================
     L1 = 0.2
-    L2 = 0.2
+    L2 = -0.2
     alpha = math.pi / 2.0 / 3.0
     d = 0.01
 
@@ -47,55 +47,77 @@ def run():
         Nr = np.array([1 / 4. * (1 + r[:, 0] * cx[i, 0]) * (1 + r[:, 1] * cx[i, 1])
                       for i in range(0, 4) ])
         return np.dot(Nr.T, X)
-
-    X1 = np.array([[0, 0], [L2, 0], [L2, d], [0, d]], dtype = 'f')
-    r1 = np.array([[0, 0]], dtype = 'f')
-    x = N_transform(r1, X1)
-    print x
-
+  
     def gt1(points):
+        
         X1 = np.array([[0, 0], [L2, 0], [L2, d], [0, d]], dtype = 'f')
-        return N_transform(points, X1)
-
+        
+        T = np.array([[ math.cos(alpha), math.sin(alpha)],
+                      [ -math.sin(alpha), math.cos(alpha)]], dtype = 'f')
+        
+        return np.dot(N_transform(points, X1),T)
+        
+        
     def gt2(points):
-        x, y = points.T
-        x_ = x * L2
-        y_ = y * d
-        return np.c_[x_, y_]
-     
-
+        
+        X2 = np.array([[0,0],[0,0],[0,d],[-d*math.sin(alpha),d*math.cos(alpha)]], dtype ='f')
+        return N_transform(points, X2)
+    
+    def gt3(points):
+        X3 = np.array([[0, 0], [L1, 0], [L1, d], [0, d]], dtype = 'f')
+        return N_transform(points, X3)
+        
     fe_domain = FEDomain()
     
+    
+    #fe_grid3.elem_X_map
+    #return
+
     fe_rg1 = FERefinementGrid(name = 'rg1',
                               fets_eval = fets_eval,
                               domain = fe_domain)
 
     # Discretization
-    fe_grid1 = FEGrid(coord_min = (-1., -1.),
+    fe_grid1 = FEGrid(coord_min =(-1.,-1.),
                       coord_max = (1., 1.),
                       shape = (1, 1),
                       fets_eval = fets_eval,
-                     geo_transform = gt1,
-                     level = fe_rg1)
+                      geo_transform = gt1,
+                      level = fe_rg1)
 
-    fe_grid1.elem_X_map
-    return
 
     fe_rg2 = FERefinementGrid(name = 'rg2',
                               fets_eval = fets_eval,
                               domain = fe_domain)
+    
+    # Discretization
+    fe_grid2 = FEGrid(coord_min =(-1.,-1.),
+                      coord_max = (1., 1.),
+                      shape = (1, 1),
+                      fets_eval = fets_eval,
+                      geo_transform = gt2,
+                      level = fe_rg2)
+    
+    
+    fe_rg3 = FERefinementGrid(name = 'rg3',
+                              fets_eval = fets_eval,
+                              domain = fe_domain)
 
     # Discretization
-    fe_grid2 = FEGrid(coord_max = (1., 1.),
-                     shape = (10, 5),
-                     fets_eval = fets_eval,
-                     geo_transform = gt2,
-                     level = fe_rg2)
+    fe_grid3 = FEGrid(coord_min = (-1.,-1.),
+                      coord_max =  (1., 1.),
+                      shape = (1, 1),
+                      fets_eval = fets_eval,
+                      geo_transform = gt3,
+                      level = fe_rg3)
+
 
     print 'count dofs', fe_domain.n_dofs
 
     bc_fixed = BCSlice(var = 'u', value = 0., dims = [0, 1],
                        slice = fe_grid1[0, :, 0, :])
+    
+    
     bc_link12 = BCSlice(var = 'u',
                         value = 0.,
                         dims = [0, 1],
@@ -103,6 +125,18 @@ def run():
                         link_coeffs = [1.0, 1.0],
                         link_dims = [0, 1],
                         link_slice = fe_grid2[0, :, 0, :])
+    
+    '''
+    bc_link23 = BCSlice(var = 'u',
+                        value = 0.,
+                        dims = [0, 1],
+                        slice = fe_grid2[-1, :, -1, :],
+                        link_coeffs = [1.0, 1.0],
+                        link_dims = [0, 1],
+                        link_slice = fe_grid3[0, :, 0, :])
+    '''
+    
+    
     bc_load2 = BCSlice(var = 'u', value = -0.01, dims = [1],
                       slice = fe_grid2[-1, -1, -1, -1 ])
 
@@ -113,6 +147,7 @@ def run():
     tstepper = TS(sdomain = fe_domain,
                    bcond_list = [bc_fixed,
                                  bc_link12,
+                                 #bc_link23,
                                  bc_load2,
                                   ],
          rtrace_list = [
