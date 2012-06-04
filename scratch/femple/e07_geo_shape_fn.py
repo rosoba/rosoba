@@ -46,7 +46,7 @@ def run():
         cx = np.array(geo_r, dtype = 'float_')
         Nr = np.array([1 / 4. * (1 + r[:, 0] * cx[i, 0]) * (1 + r[:, 1] * cx[i, 1])
                       for i in range(0, 4) ])
-        return np.dot(Nr.T, X1)
+        return np.dot(Nr.T, X)
 
     X1 = np.array([[0, 0], [L2, 0], [L2, d], [0, d]], dtype = 'f')
     r1 = np.array([[0, 0]], dtype = 'f')
