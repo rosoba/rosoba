@@ -32,7 +32,7 @@ def run():
     #fets_eval = FETS2D4Q(mats_eval = MATS2DElastic())
     fets_13 = FETS2D4Q8U(mats_eval = MATS2DElastic(E = 28e5, nu = 0.2))
     fets_2 = FETS2D4Q8U(mats_eval = MATS2DElastic(E = 20e5, nu = 0.2))
-    fets_4 = FETS2D4Q8U(mats_eval = MATS2DElastic(E = 28e5, nu = 0.2))
+    fets_4 = FETS2D4Q8U(mats_eval = MATS2DElastic(E = 21e8, nu = 0.2))
     
     from mathkit.mfn import MFnLineArray
 
@@ -78,14 +78,14 @@ def run():
         T = np.array([[ math.cos(alpha), math.sin(alpha)],
                       [ -math.sin(alpha), math.cos(alpha)]], dtype = 'f')
         X4 = np.dot(X4, T)
-        return N_transform(points,X4)
+        return N_transform(points, X4)
     
     def gt5(points):
-        X5 = np.array([[-L2, d], [0, d], [0, 2*d], [-L2, 2*d]], dtype = 'f')
+        X5 = np.array([[-L2, d], [0, d], [0, 2 * d], [-L2, 2 * d]], dtype = 'f')
         T = np.array([[ math.cos(alpha), math.sin(alpha)],
                       [ -math.sin(alpha), math.cos(alpha)]], dtype = 'f')
         X5 = np.dot(X5, T)
-        return N_transform(points,X5)
+        return N_transform(points, X5)
     
     fe_domain = FEDomain()
     
@@ -139,19 +139,19 @@ def run():
     # Discretization
     fe_grid4 = FEGrid(coord_min = (-1., -1.),
                       coord_max = (1., 1.),
-                      shape = (n_x, n_z),
+                      shape = (n_x, 1),
                       fets_eval = fets_4,
                       geo_transform = gt4,
                       level = fe_rg4)
     
-    fe_rg5 = FERefinementGrid(name = 'rg4',
+    fe_rg5 = FERefinementGrid(name = 'rg5',
                               fets_eval = fets_4,
                               domain = fe_domain)
 
     # Discretization
     fe_grid5 = FEGrid(coord_min = (-1., -1.),
                       coord_max = (1., 1.),
-                      shape = (1, 1),
+                      shape = (n_x, 1),
                       fets_eval = fets_4,
                       geo_transform = gt5,
                       level = fe_rg5)
@@ -160,24 +160,23 @@ def run():
     print 'count dofs', fe_domain.n_dofs
 
     bc_fixed = BCSlice(var = 'u', value = 0., dims = [0, 1],
-                       slice = fe_grid1[0, :, 0, :])
-    
+                       slice = fe_grid4[:, 0, :, 0])
   
     bc_link14 = BCSlice(var = 'u',
                         value = 0.,
                         dims = [0, 1],
-                        slice = fe_grid1[:, 0, 0, :],
+                        slice = fe_grid4[:, -1, :-1, -1],
                         link_coeffs = [1.0, 1.0],
                         link_dims = [0, 1],
-                        link_slice = fe_grid4[:, -1, 0, :])
+                        link_slice = fe_grid1[:, 0, :-1, 0])
   
     bc_link15 = BCSlice(var = 'u',
                         value = 0.,
                         dims = [0, 1],
-                        slice = fe_grid1[:, -1, 0, :],
+                        slice = fe_grid5[:, 0, :-1, 0],
                         link_coeffs = [1.0, 1.0],
                         link_dims = [0, 1],
-                        link_slice = fe_grid5[:, 0, 0, :])
+                        link_slice = fe_grid1[:, -1, :-1, -1])
      
       
     bc_link12 = BCSlice(var = 'u',
@@ -241,7 +240,7 @@ def run():
     tloop = TLoop(tstepper = tstepper, KMAX = 300, tolerance = 1e-4,
                    tline = TLine(min = 0.0, step = 1., max = 1.0))
 
-    tloop.eval()
+    #tloop.eval()
 
     # Put the whole thing into the simulation-framework to map the
     # individual pieces of definition into the user interface.
