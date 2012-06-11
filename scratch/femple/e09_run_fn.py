@@ -22,6 +22,8 @@ from ibvpy.fets.fets2D import FETS2D4Q8U
 import numpy as np
 import math
 
+from e08_class import geotransform
+
 def run():
     from ibvpy.api import \
         TStepper as TS, RTraceGraph, RTraceDomainListField, \
@@ -34,58 +36,29 @@ def run():
     fets_2 = FETS2D4Q8U(mats_eval = MATS2DElastic(E = 20e5, nu = 0.2))
     fets_4 = FETS2D4Q8U(mats_eval = MATS2DElastic(E = 28e5, nu = 0.2))
     
+    
+    
     from mathkit.mfn import MFnLineArray
 
     #===========================================================================
     # Geometry
     #===========================================================================
+     
+    
+    
+    '''
     L1 = 0.2
     L2 = 0.2
-    alpha = math.pi / 2.0 / 3.0
+    alpha = math.pi / 2.0 / 3.0 
     d = 0.01
     h = 0.01
 
     n_z = 4
     n_x = 5 
 
-    geo_r = np.array([[-1, -1], [1, -1], [1, 1], [-1, 1]], dtype = 'f')
-    
-    def N_transform(r, X):
-        cx = np.array(geo_r, dtype = 'float_')
-        Nr = np.array([1 / 4. * (1 + r[:, 0] * cx[i, 0]) * (1 + r[:, 1] * cx[i, 1])
-                      for i in range(0, 4) ])
-        return np.dot(Nr.T, X)
-  
-    def gt1(points):
-        X1 = np.array([[-L2, 0], [0, 0], [0, d], [-L2, d]], dtype = 'f')
-        T = np.array([[ math.cos(alpha), math.sin(alpha)],
-                      [ -math.sin(alpha), math.cos(alpha)]], dtype = 'f')
-        X1 = np.dot(X1, T)
-        return N_transform(points, X1)
-        
-        
-    def gt2(points):
-        
-        X2 = np.array([[0, 0], [h, 0], [h, d], [-d * math.sin(alpha), d * math.cos(alpha)]], dtype = 'f')
-        return N_transform(points, X2)
-    
-    def gt3(points):
-        X3 = np.array([[h, 0], [L1 + h, 0], [L1 + h, d], [h, d]], dtype = 'f')
-        return N_transform(points, X3)
-        
-    def gt4(points):
-        X4 = np.array([[-L2, -d], [0, -d], [0, 0], [-L2, 0]], dtype = 'f')
-        T = np.array([[ math.cos(alpha), math.sin(alpha)],
-                      [ -math.sin(alpha), math.cos(alpha)]], dtype = 'f')
-        X4 = np.dot(X4, T)
-        return N_transform(points,X4)
-    
-    def gt5(points):
-        X5 = np.array([[-L2, d], [0, d], [0, 2*d], [-L2, 2*d]], dtype = 'f')
-        T = np.array([[ math.cos(alpha), math.sin(alpha)],
-                      [ -math.sin(alpha), math.cos(alpha)]], dtype = 'f')
-        X5 = np.dot(X5, T)
-        return N_transform(points,X5)
+    X1 = np.array([[-L2, 0], [0, 0], [0, d], [-L2, d]], dtype = 'f')
+    '''
+    gt1 = geotransform ()
     
     fe_domain = FEDomain()
     
@@ -105,7 +78,7 @@ def run():
                       geo_transform = gt1,
                       level = fe_rg1)
 
-
+    '''
     fe_rg2 = FERefinementGrid(name = 'rg2',
                               fets_eval = fets_2,
                               domain = fe_domain)
@@ -156,13 +129,13 @@ def run():
                       geo_transform = gt5,
                       level = fe_rg5)
 
-    
+    '''
     print 'count dofs', fe_domain.n_dofs
 
     bc_fixed = BCSlice(var = 'u', value = 0., dims = [0, 1],
                        slice = fe_grid1[0, :, 0, :])
     
-  
+    '''
     bc_link14 = BCSlice(var = 'u',
                         value = 0.,
                         dims = [0, 1],
@@ -196,7 +169,7 @@ def run():
                         link_dims = [0, 1],
                         link_slice = fe_grid3[0, :, 0, :])
     
-    
+    '''
     mf = MFnLineArray(xdata = np.array([0, 0.1, 0.6, 1], dtype = 'f'),
                       ydata = np.array([0, 0.4, -0.5, 1], dtype = 'f'))
 
