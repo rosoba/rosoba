@@ -131,7 +131,7 @@ def run():
                       geo_transform = gt3,
                       level = fe_rg3)
 
-    
+
     fe_rg4 = FERefinementGrid(name = 'rg4',
                               fets_eval = fets_4,
                               domain = fe_domain)
@@ -156,12 +156,13 @@ def run():
                       geo_transform = gt5,
                       level = fe_rg5)
 
-    
     print 'count dofs', fe_domain.n_dofs
-
+   
     bc_fixed = BCSlice(var = 'u', value = 0., dims = [0, 1],
                        slice = fe_grid4[:, 0, :, 0])
   
+  
+    
     bc_link14 = BCSlice(var = 'u',
                         value = 0.,
                         dims = [0, 1],
@@ -178,7 +179,7 @@ def run():
                         link_dims = [0, 1],
                         link_slice = fe_grid1[:, -1, :-1, -1])
      
-      
+
     bc_link12 = BCSlice(var = 'u',
                         value = 0.,
                         dims = [0, 1],
@@ -194,12 +195,12 @@ def run():
                         link_coeffs = [1.0, 1.0],
                         link_dims = [0, 1],
                         link_slice = fe_grid3[0, :, 0, :])
-    
+   
     
     mf = MFnLineArray(xdata = np.array([0, 0.1, 0.6, 1], dtype = 'f'),
                       ydata = np.array([0, 0.4, -0.5, 1], dtype = 'f'))
 
-    bc_load2 = BCSlice(var = 'u', value = -0.01, dims = [1], time_function = mf.get_value,
+    bc_load2 = BCSlice(var = 'u', value = -0.05, dims = [1], time_function = mf.get_value,
                       slice = fe_grid3[-1, -1, -1, -1 ])
 
     load_dofs = fe_grid3[-1, -1, :, -1 ].dofs[:, :, 1].flatten()
