@@ -23,6 +23,8 @@ from etsproxy.traits.ui.menu import \
      NoButtons, OKButton, CancelButton, Action, CloseAction, Menu, \
      MenuBar, Separator
 
+from ibvpy.api import IBVModel
+
 import numpy as np
 
 from scipy.linalg import \
@@ -31,41 +33,29 @@ from scipy.linalg import \
 from ibvpy.fets.fets_eval import FETSEval
 import math
 
-  
-class geotransform (HasTraits):
+class FoldedBondTest(IBVModel):
+    '''Idealization of the test for the characterization of
+    bond behavior within crease line of a folded plate. 
+    '''
+    L1 = Float(0.2, desc = 'Length of the left part')
+    L2 = Float(0.2, desc = 'Length of the right part')
+    alpha = Float(math.pi / 2.0 / 3.0, desc = 'Fold angle')
+    d = Float(0.01, desc = 'thickness of the plate')
+    h = Float(0.01, desc = 'width of the plate')
 
-    debug_on = True
-       '''
-    L1 = 0.2
-    L2 = 0.2
-    alpha = math.pi / 2.0 / 3.0
-    d = 0.01
-    h = 0.01
+    #===========================================================================
+    # Discretization parameters
+    #===========================================================================
+    n_z = Int(4, desc = 'number of elements in the thickness direction')
+    n_x = Int(5, desc = 'number of elements in the length direction of a plate')
 
-    n_z = 4
-    n_x = 5 
- 
-    def __init__(self,X,alpha,L2,d):
-        self.X = X
-        self.alpha = alpha
-        self.L2=L2
-        self.d=d
-   '''
-    gt = Property
-    
-    def _get_gt(self,L2, d, alpha, points):
-        
-        X1 = np.array([[L2, 0], [0, 0], [0, d], [-L2, d]], dtype = 'f')
-        T = np.array([[ math.cos(alpha), math.sin(alpha)],
-                  [ -math.sin(alpha), math.cos(alpha)]], dtype = 'f')
-        X1 = np.dot(X1, T)
-        return self.N_transform(points, X1)
+    view = View(Item('L1', label = 'length of fixed part'),
+                Item('L2', label = 'length of the loaded part'),
+                Item('alpha'),
+                width = 0.2,
+                height = 0.3
+                )
 
-    
-    def N_transform(self,r, X):
-        
-        geo_r = np.array([[-1, -1], [1, -1], [1, 1], [-1, 1]], dtype = 'f')
-        cx = np.array(geo_r, dtype = 'float_')
-        Nr = np.array([1 / 4. * (1 + r[:, 0] * cx[i, 0]) * (1 + r[:, 1] * cx[i, 1])
-                      for i in range(0, 4) ])
-        return np.dot(Nr.T, X)      
+if __name__ == '__main__':
+    fbt = FoldedBondTest()
+    fbt.configure_traits()

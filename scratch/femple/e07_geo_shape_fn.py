@@ -241,7 +241,7 @@ def run():
     tloop = TLoop(tstepper = tstepper, KMAX = 300, tolerance = 1e-4,
                    tline = TLine(min = 0.0, step = 1., max = 1.0))
 
-    #tloop.eval()
+    tloop.eval()
 
     # Put the whole thing into the simulation-framework to map the
     # individual pieces of definition into the user interface.
