@@ -46,6 +46,8 @@ from ibvpy.mats.mats2D.mats2D_elastic.mats2D_elastic import MATS2DElastic
 from ibvpy.fets.fets_eval import FETSEval
 import math
 
+from rosoba.scratch.femple.e_10_grouting import FETS1D52L4ULRH
+
 class FoldedBondTest(IBVModel):
     '''Idealization of the test for the characterization of
     bond behavior within crease line of a folded plate. 
@@ -81,44 +83,66 @@ class FoldedBondTest(IBVModel):
     # an afine/proportional damage evolution for different ages. 
     #
     age = Int(28, input = True)
-
-    # composite E-modulus 
-    #
-    da = 2 * math.sqrt(math.pi)
-    tau_max = 0.1 * da * math.pi
-    G = 100
-    u_max = 0.023
-    f_max = 0.2
-    
-    
+    #-----------------------------------------------------------
+    # material parameters:  E-modulus, Poisson's ratio
+    #-----------------------------------------------------------
     E_concrete = Float(28e5, input = True)
 
-    # Poisson's ratio 
-    #
     nu_concrete = Float(0.2, input = True)
 
-    # composite E-modulus 
-    #
+    E_composite = Float(28e5, input = True)
+    
+    nu_composite = Float(0.2, input = True)
+    
     E_steel = Float(28e5, input = True)
 
-    # Poisson's ratio 
-    #
     nu_steel = Float(0.2, input = True)
+    
+    stiffness_crack = Float (34000 * 0.03 * 0.03, input = True)
+    A_fiber = Float (1., input = True)
+    E_fiber = Float (1., input = True)
+    stiffness_fiber = E_fiber * A_fiber
 
+    tau_max_crack = Float (0.1 * math.sqrt(math.pi)*2 * math.pi, input = True)
+    G_crack = Float (100., input = True)
+    u_max = Float (0.023, input = True)
+    f_max = Float (0.2, input = True)
+    
+    
+    
+    
+    
     #-----------------
     # fets:
     #-----------------
 
+    
+    
+    
+    
+    
     # use quadratic serendipity elements
     #
-    fets_grouting = Property(Instance(FETSEval),
-                                 depends_on = 'E_,nu')
+    fets_crack = Property(Instance(FETSEval),
+                          depends_on = 'E_crack,nu_crack')
     @cached_property
-    def _get_grouting(self):
-        return FETS2D4Q8U(mats_eval = MATS2DElastic(
-                                                      E = self.E_composite,
-                                                      nu = self.nu_composite,
-                                                      ))
+    def _get_fets_crack (self):
+        return FETS1D52L4ULRH(mats_eval = MATS1D5Bond(mats_phase1 = MATS1DElastic(E = self.E_fiber*self.A_fiber),
+                              mats_phase2 = MATS1DElastic(E = 0),
+                              mats_ifslip = MATS1DPlastic(E = self.G_crack,
+                                                          sigma_y = self.tau_max_crack,
+                                                          K_bar = 0.,
+                                                          H_bar = 0.),
+                              mats_ifopen = MATS1DElastic(E = 0)))
+    
+    fets_grouting = Property(Instance(FETSEval),
+                                 depends_on = 'E_concrete,nu_concrete')
+    @cached_property
+    def _get_fets_grouting(self):
+        return FETS2D4Q8U(mats_eval =  MATS2DElastic(
+                                                      E = self.E_concrete,
+                                                      nu = self.nu_concrete,
+                                                      ))    
 
 
     fets_concrete = Property(Instance(FETSEval),
@@ -147,6 +171,9 @@ class FoldedBondTest(IBVModel):
         Nr = np.array([1 / 4. * (1 + r[:, 0] * cx[i, 0]) * (1 + r[:, 1] * cx[i, 1])
                       for i in range(0, 4) ])
         return np.dot(Nr.T, X)
+    
+   
+    
       
     def gt_plate_left(self, points):
         X1 = np.array([[-self.L2, 0], [0, 0], [0, self.d], [-self.L2, self.d]], dtype = 'f')
@@ -196,6 +223,23 @@ class FoldedBondTest(IBVModel):
     fe_grid1 = Property
     @cached_property 
     def _get_fe_grid1(self): 
+        return FEGrid(coord_min = (-1., -1.),
+                          coord_max = (1., 1.),
+                          shape = (self.n_x, self.n_z),
+                          fets_eval = self.fets_concrete,
+                          geo_transform = self.gt_plate_left,
+                          level = self.fe_rg1)
+    
+    fe_crack_left = Property
+    @cached_property
+    def _get_fe_crack_left (self):
+         return FERefinementGrid(name = 'crack_left',
+                                fets_eval = self.fets_concrete,
+                                domain = self.fe_domain)
+    
+    fe_grid_crack_left = Property
+    @cached_property
+    def _get_fe_grid_crack_left (self):
         return FEGrid(coord_min = (-1., -1.),
                           coord_max = (1., 1.),
                           shape = (self.n_x, self.n_z),
