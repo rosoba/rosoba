@@ -34,8 +34,9 @@ import numpy as np
 
 from ibvpy.fets.fets2D import FETS2D4Q8U
 
-from ibvpy.fets.fets1D5 import FETS1D52L4ULRH
+#from ibvpy.fets.fets1D5 import FETS1D52L4ULRH
 
+from e_09_fets_crack import FETS1D52L4ULRH
 from ibvpy.mats.mats1D import \
     MATS1DDamage, MATS1DPlastic, MATS1DElastic
 
@@ -47,7 +48,6 @@ from ibvpy.mats.mats2D.mats2D_elastic.mats2D_elastic import MATS2DElastic
 from ibvpy.fets.fets_eval import FETSEval
 import math
 
-#from rosoba.scratch.femple.e_10_grouting import FETS1D52L4ULRH
 
 class FoldedBondTest(IBVModel):
     '''Idealization of the test for the characterization of
