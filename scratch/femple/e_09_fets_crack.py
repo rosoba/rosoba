@@ -1,6 +1,6 @@
 from etsproxy.traits.api import \
     Int, implements, List, Array, Property, cached_property, \
-    Float
+    Float, Constant
 
 from ibvpy.api import \
     FETSEval
@@ -53,16 +53,20 @@ class FETS1D52L4ULRH(FETSEval):
                            [-1, 1]])
     vtk_cells = [[0, 1], [1, 2], [2, 3], [3, 0]]
     vtk_cell_types = 'Line'
-
+    '''
+    ToDo:
+    - T_max, alpha aus X berechnen
+    - T_max testen
+    - Element einbauen
+    '''
     def get_T_mtx (self,X):
-        alpha aus x berechnen
-        alpha=Pi*(1/12)
-        T = [[cos(alpha), -sin(alpha)],
-            [sin(alpha),cos(alpha)]]
-        O = zeros(2,2)
-        T_mtx=[[T,O,O,O],[O,T,O,O],[O,O,T,O],[O,O,O,T]]
-        
-        return dot(X,T_mtx)
+        #alpha aus x berechnen
+        delta_Y = X[3,1]-X[0,1] 
+        delta_X = X[3,0]-X[0,0]
+        sin_alpha = delta_Y/(sqrt(delta_Y**2 + delta_X**2 )) 
+        cos_alpha = delta_X/(sqrt(delta_Y**2 + delta_X**2 )) 
+        return     [[cos_alpha, -sin_alpha],
+                    [sin_alpha,  cos_alpha]]   
     
     def _get_ip_coords(self):
         offset = 1e-6
@@ -116,7 +120,8 @@ class FETS1D52L4ULRH(FETSEval):
         @param X:global coordinates
         '''
         # length in x-direction
-        L = (X[1, 1] - X[1, 0]) #Pythsa
+        L = sqrt((X[3,0]-X[0,0])**2+(X[3,1]-X[0,1])**2)
+
 
         # generate the shape functions of the form
         # N[0], N[1], N[2], N[3]
@@ -127,11 +132,30 @@ class FETS1D52L4ULRH(FETSEval):
 
         # assemble the B matrix mapping the DOFs to strains and slip and opening
         #                  u0,   v0,   u1,  v1,  u2,    v2,   u3,   v3, 
+        
+        
+        dNdx_eps1 = array ([[-1. / L, 0, 1. / L, 0, 0, 0, 0, 0],[0,0,0,0,0,0,0,0]], dtype = float_)
+        dNdx_slip = array ([[ N[0], 0, N[1], 0, -N[2], 0, -N[3], 0],[0,0,0,0,0,0,0,0]], dtype = float_)
+        dNdx_opening = array ([[0, N[0], 0, N[1], 0, -N[2], 0, -N[3]],[0,0,0,0,0,0,0,0]], dtype = float_)
+        dNdx_eps2 = array ([[0, 0, 0, 0, 1. / L, 0, -1. / L, 0],[0,0,0,0,0,0,0,0]], dtype = float_)
+        dNdx_eps1_trans = dot(self.get_T_mtx(X),dNdx_eps1)
+        dNdx_slip_trans = dot(self.get_T_mtx(X),dNdx_slip)
+        dNdx_opening_trans = dot(self.get_T_mtx(X),dNdx_opening)
+        dNdx_eps2_trans = dot(self.get_T_mtx(X),dNdx_eps2)
+        B_mtx = zeros ((4,8), dtype =float_)
+        B_mtx[[0,0,0,0,0,0,0,0],[0,1,2,3,4,5,6,7]]=dNdx_eps1_trans[[0,0,0,0,0,0,0,0],[0,1,2,3,4,5,6,7]]
+        B_mtx[[1,1,1,1,1,1,1,1],[0,1,2,3,4,5,6,7]]=dNdx_slip_trans[[0,0,0,0,0,0,0,0],[0,1,2,3,4,5,6,7]]
+        B_mtx[[2,2,2,2,2,2,2,2],[0,1,2,3,4,5,6,7]]=dNdx_opening_trans[[0,0,0,0,0,0,0,0],[0,1,2,3,4,5,6,7]]
+        B_mtx[[3,3,3,3,3,3,3,3],[0,1,2,3,4,5,6,7]]=dNdx_eps2_trans[[0,0,0,0,0,0,0,0],[0,1,2,3,4,5,6,7]]        
+        '''
         B_mtx = array([[-1. / L, 0, 1. / L, 0, 0, 0, 0, 0], # eps_1
                        [ N[0], 0, N[1], 0, -N[2], 0, -N[3], 0], # slip
                        [    0, N[0], 0, N[1], 0, -N[2], 0, -N[3]], # opening
                        [    0, 0, 0, 0, 1. / L, 0, -1. / L, 0], # eps_2
                        ], dtype = float_)
+        '''
+        
+        
         return B_mtx
 
     def get_eps1(self, sctx, u, *args, **kw):

@@ -171,6 +171,9 @@ class FoldedBondTest(IBVModel):
         T = np.array([[ math.cos(self.alpha), math.sin(self.alpha)],
                       [ -math.sin(self.alpha), math.cos(self.alpha)]], dtype = 'f')
         X4 = np.dot(X4, T)
+        print 'X4=',X4
+        print 'X4erste Zeile',X4[0,0]
+        print 'X4erster Wert', X4[0,0],[0,0]
         return self.N_transform(points, X4)
     
     def gt_buttstrap_top(self, points):

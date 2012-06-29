@@ -132,6 +132,7 @@ class FETS2D4Q(FETSEval):
         B_mtx = np.zeros ((3, 4, 2), dtype = 'f')
         
         B_mtx[self.B_idx_map] = dNx_mtx[self.dN_idx_map]
+   
         return B_mtx.reshape(3, 8)
 
 
@@ -225,6 +226,6 @@ def run():
     from ibvpy.plugins.ibvpy_app import IBVPyApp
     app = IBVPyApp(ibv_resource = tloop)
     app.main()
-
+ 
 if __name__ == '__main__':
     run()
