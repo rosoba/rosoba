@@ -37,6 +37,7 @@ from ibvpy.fets.fets2D import FETS2D4Q8U
 #from ibvpy.fets.fets1D5 import FETS1D52L4ULRH
 
 from e_09_fets_crack import FETS1D52L4ULRH
+
 from ibvpy.mats.mats1D import \
     MATS1DDamage, MATS1DPlastic, MATS1DElastic
 
@@ -65,8 +66,8 @@ class FoldedBondTest(IBVModel):
     #===========================================================================
     # Discretization parameters
     #===========================================================================
-    n_z = Int(4, desc = 'number of elements in the thickness direction')
-    n_x = Int(5, desc = 'number of elements in the length direction of a plate')
+    n_z = Int(1, desc = 'number of elements in the thickness direction')
+    n_x = Int(1, desc = 'number of elements in the length direction of a plate')
 
     view = View(Item('L1', label = 'length of fixed part'),
                 Item('L2', label = 'length of the loaded part'),
@@ -102,11 +103,11 @@ class FoldedBondTest(IBVModel):
     stiffness_crack = Float (34000 * 0.03 * 0.03, input = True)
     A_fiber = Float (1., input = True)
     E_fiber = Float (1., input = True)
-    stiffness_fiber = 12
+    stiffness_fiber = 12000000
 
-    tau_max_crack = Float (0.1 * math.sqrt(math.pi)*2 * math.pi, input = True)
+    tau_max_crack = Float (1.* math.sqrt(math.pi)*2 * math.pi, input = True)
     G_crack = Float (100., input = True)
-    u_max = Float (0.023, input = True)
+    u_max = Float (0.23, input = True)
     f_max = Float (0.2, input = True)
     
     
@@ -197,7 +198,8 @@ class FoldedBondTest(IBVModel):
         return self.N_transform(points, X2)
     
     def gt_crack_right(self,points): 
-        X= np.array([[self.h, 0], [self.h, self.d],[self.h, 0], [self.h, self.d]], dtype ='f')
+        X= np.array([[self.h, 0], [self.h+0.001, self.d],[self.h+0.001, 0], [self.h, self.d]], dtype ='f')
+      
         return self.N_transform(points, X)
     
     def gt_plate_right(self, points):
@@ -245,7 +247,7 @@ class FoldedBondTest(IBVModel):
     fe_crack_left = Property
     @cached_property
     def _get_fe_crack_left (self):
-         return FERefinementGrid(name = 'crack_left',
+         return FERefinementGrid(name = 'rg6',
                                 fets_eval = self.fets_crack,
                                 domain = self.fe_domain)
     
@@ -262,7 +264,7 @@ class FoldedBondTest(IBVModel):
     fe_crack_right = Property
     @cached_property
     def _get_fe_crack_right (self):
-         return FERefinementGrid(name = 'crack_left',
+        return FERefinementGrid(name = 'rg7',
                                 fets_eval = self.fets_crack,
                                 domain = self.fe_domain)
     
@@ -274,7 +276,7 @@ class FoldedBondTest(IBVModel):
                           shape = (self.n_x, self.n_z),
                           fets_eval = self.fets_crack,
                           geo_transform = self.gt_crack_right,
-                          level = self.fe_crack_left)    
+                          level = self.fe_crack_right)    
     fe_rg2 = Property
     @cached_property 
     def _get_fe_rg2(self):
@@ -412,7 +414,7 @@ class FoldedBondTest(IBVModel):
         mf = MFnLineArray(xdata = np.array([0, 0.1, 0.6, 1], dtype = 'f'),
                           ydata = np.array([0, 0.4, -0.5, 1], dtype = 'f'))
     
-        bc_load2 = BCSlice(var = 'u', value = -0.05, dims = [1], time_function = mf.get_value,
+        bc_load2 = BCSlice(var = 'u', value = -0.005, dims = [1], time_function = mf.get_value,
                           slice = self.fe_grid3[-1, -1, -1, -1 ])
     
         load_dofs = self.fe_grid3[-1, -1, :, -1 ].dofs[:, :, 1].flatten()

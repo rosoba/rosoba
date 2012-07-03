@@ -14,7 +14,7 @@ from ibvpy.mats.mats1D import \
 from ibvpy.mats.mats1D5.mats1D5_bond import \
     MATS1D5Bond
 
-from numpy import array, dot, identity, zeros, float_, ix_
+from numpy import array, dot, identity, zeros, float_, ix_, transpose as T
 from math import fabs, pi as Pi, sqrt, sin, cos
 #-----------------------------------------------------------------------------
 # FEBond
@@ -61,12 +61,37 @@ class FETS1D52L4ULRH(FETSEval):
     '''
     def get_T_mtx (self,X):
         #alpha aus x berechnen
-        delta_Y = X[3,1]-X[0,1] 
-        delta_X = X[3,0]-X[0,0]
-        sin_alpha = delta_Y/(sqrt(delta_Y**2 + delta_X**2 )) 
-        cos_alpha = delta_X/(sqrt(delta_Y**2 + delta_X**2 )) 
-        return     [[cos_alpha, -sin_alpha],
-                    [sin_alpha,  cos_alpha]]   
+        sin_alpha = sin(Pi/2)
+        cos_alpha = cos (Pi/2)
+        return     [[cos_alpha, sin_alpha,0,0,0,0,0,0],
+                    [-sin_alpha,  cos_alpha,0,0,0,0,0,0],
+                    [0,0,cos_alpha, sin_alpha,0,0,0,0],
+                    [0,0,-sin_alpha,  cos_alpha,0,0,0,0],
+                    [0,0,0,0,cos_alpha, sin_alpha,0,0],
+                    [0,0,0,0,-sin_alpha,  cos_alpha,0,0],
+                    [0,0,0,0,0,0,cos_alpha, sin_alpha],
+                    [0,0,0,0,0,0,-sin_alpha,  cos_alpha]]    
+    
+    def get_T_MTX (self,X):
+        delta_Y = abs(X[3,1]-X[0,1]) 
+        delta_X = abs(X[3,0]-X[0,0])
+        #sin_alpha = delta_Y/(sqrt(delta_Y**2 + delta_X**2 )) 
+        #cos_alpha = delta_X/(sqrt(delta_Y**2 + delta_X**2 )) 
+        cos_alpha = cos(0)
+        sin_alpha = sin(0)
+        '''
+        Testen, ob modul sich dreht, alle Funktionen sind auskommentiert!!!!!
+        '''
+        T_MTX = [[cos_alpha, sin_alpha,0,0,0,0,0,0],
+                    [-sin_alpha,  cos_alpha,0,0,0,0,0,0],
+                    [0,0,cos_alpha, sin_alpha,0,0,0,0],
+                    [0,0,-sin_alpha,  cos_alpha,0,0,0,0],
+                    [0,0,0,0,cos_alpha, sin_alpha,0,0],
+                    [0,0,0,0,-sin_alpha,  cos_alpha,0,0],
+                    [0,0,0,0,0,0,cos_alpha, sin_alpha],
+                    [0,0,0,0,0,0,-sin_alpha,  cos_alpha]]
+
+        return     T_MTX 
     
     def _get_ip_coords(self):
         offset = 1e-6
@@ -121,7 +146,8 @@ class FETS1D52L4ULRH(FETSEval):
         '''
         # length in x-direction
         L = sqrt((X[3,0]-X[0,0])**2+(X[3,1]-X[0,1])**2)
-
+        print 'X',X
+        print 'L',L
 
         # generate the shape functions of the form
         # N[0], N[1], N[2], N[3]
@@ -133,31 +159,14 @@ class FETS1D52L4ULRH(FETSEval):
         # assemble the B matrix mapping the DOFs to strains and slip and opening
         #                  u0,   v0,   u1,  v1,  u2,    v2,   u3,   v3, 
         
-        
-        dNdx_eps1 = array ([[-1. / L, 0, 1. / L, 0, 0, 0, 0, 0],[0,0,0,0,0,0,0,0]], dtype = float_)
-        dNdx_slip = array ([[ N[0], 0, N[1], 0, -N[2], 0, -N[3], 0],[0,0,0,0,0,0,0,0]], dtype = float_)
-        dNdx_opening = array ([[0, N[0], 0, N[1], 0, -N[2], 0, -N[3]],[0,0,0,0,0,0,0,0]], dtype = float_)
-        dNdx_eps2 = array ([[0, 0, 0, 0, 1. / L, 0, -1. / L, 0],[0,0,0,0,0,0,0,0]], dtype = float_)
-        dNdx_eps1_trans = dot(self.get_T_mtx(X),dNdx_eps1)
-        dNdx_slip_trans = dot(self.get_T_mtx(X),dNdx_slip)
-        dNdx_opening_trans = dot(self.get_T_mtx(X),dNdx_opening)
-        dNdx_eps2_trans = dot(self.get_T_mtx(X),dNdx_eps2)
-        B_mtx = zeros ((4,8), dtype =float_)
-        B_mtx[[0,0,0,0,0,0,0,0],[0,1,2,3,4,5,6,7]]=dNdx_eps1_trans[[0,0,0,0,0,0,0,0],[0,1,2,3,4,5,6,7]]
-        B_mtx[[1,1,1,1,1,1,1,1],[0,1,2,3,4,5,6,7]]=dNdx_slip_trans[[0,0,0,0,0,0,0,0],[0,1,2,3,4,5,6,7]]
-        B_mtx[[2,2,2,2,2,2,2,2],[0,1,2,3,4,5,6,7]]=dNdx_opening_trans[[0,0,0,0,0,0,0,0],[0,1,2,3,4,5,6,7]]
-        B_mtx[[3,3,3,3,3,3,3,3],[0,1,2,3,4,5,6,7]]=dNdx_eps2_trans[[0,0,0,0,0,0,0,0],[0,1,2,3,4,5,6,7]]        
-        '''
+       
         B_mtx = array([[-1. / L, 0, 1. / L, 0, 0, 0, 0, 0], # eps_1
                        [ N[0], 0, N[1], 0, -N[2], 0, -N[3], 0], # slip
                        [    0, N[0], 0, N[1], 0, -N[2], 0, -N[3]], # opening
                        [    0, 0, 0, 0, 1. / L, 0, -1. / L, 0], # eps_2
                        ], dtype = float_)
-        '''
+        return dot(B_mtx,self.get_T_mtx(X))
         
-        
-        return B_mtx
-
     def get_eps1(self, sctx, u, *args, **kw):
         '''Get strain in phase 1.
         '''  
@@ -227,7 +236,7 @@ def example():
                              mats_ifopen = MATS1DElastic(E = 10))
 
     fets_eval = FETS1D52L4ULRH(mats_eval = mats_eval)
-    domain = FEGrid(coord_max = (1., 0.2),
+    domain = FEGrid( coord_max = (1., 0.2),
                      shape = (1, 1),
                      fets_eval = fets_eval)
 
@@ -237,8 +246,8 @@ def example():
          # conversion to list (square brackets) is only necessary for slicing of 
          # single dofs, e.g "get_left_dofs()[0,1]"
          bcond_list = [
-                        BCSlice(var = 'u', value = 0., dims = [1],
-                                 slice = domain[ 0, :, 0, :]),
+                        #BCSlice(var = 'u', value = 0., dims = [1],
+                        #         slice = domain[ 0, :, 0, :]),
                         BCSlice(var = 'u', value = 0., dims = [0],
                                  slice = domain[:,0 ,:, 0]),
                         BCSlice(var = 'u', value = f_max, dims = [1],
@@ -271,9 +280,9 @@ def example():
     # Put the whole stuff into the simulation-framework to map the
     # individual pieces of definition into the user interface.
     #
-    #from ibvpy.plugins.ibvpy_app import IBVPyApp
-    #app = IBVPyApp(ibv_resource = tloop)
-    #app.main()
+    from ibvpy.plugins.ibvpy_app import IBVPyApp
+    app = IBVPyApp(ibv_resource = tloop)
+    app.main()
     
 
 if __name__ == '__main__':
