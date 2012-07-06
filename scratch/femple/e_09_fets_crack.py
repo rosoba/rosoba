@@ -59,37 +59,25 @@ class FETS1D52L4ULRH(FETSEval):
     - T_max testen
     - Element einbauen
     '''
-    def get_T_mtx (self,X):
-        #alpha aus x berechnen
-        sin_alpha = sin(Pi/2)
-        cos_alpha = cos (Pi/2)
-        return     [[cos_alpha, sin_alpha,0,0,0,0,0,0],
-                    [-sin_alpha,  cos_alpha,0,0,0,0,0,0],
-                    [0,0,cos_alpha, sin_alpha,0,0,0,0],
-                    [0,0,-sin_alpha,  cos_alpha,0,0,0,0],
-                    [0,0,0,0,cos_alpha, sin_alpha,0,0],
-                    [0,0,0,0,-sin_alpha,  cos_alpha,0,0],
-                    [0,0,0,0,0,0,cos_alpha, sin_alpha],
-                    [0,0,0,0,0,0,-sin_alpha,  cos_alpha]]    
     
-    def get_T_MTX (self,X):
+    def get_T_mtx (self,X):
         delta_Y = abs(X[3,1]-X[0,1]) 
         delta_X = abs(X[3,0]-X[0,0])
-        #sin_alpha = delta_Y/(sqrt(delta_Y**2 + delta_X**2 )) 
-        #cos_alpha = delta_X/(sqrt(delta_Y**2 + delta_X**2 )) 
-        cos_alpha = cos(0)
-        sin_alpha = sin(0)
+        sin_alpha = (delta_Y/(sqrt(delta_Y**2 + delta_X**2 ))) 
+        cos_alpha = (delta_X/(sqrt(delta_Y**2 + delta_X**2 ))) 
+        #cos_alpha = cos(0)
+        #sin_alpha = sin(0)
         '''
         Testen, ob modul sich dreht, alle Funktionen sind auskommentiert!!!!!
         '''
-        T_MTX = [[cos_alpha, sin_alpha,0,0,0,0,0,0],
-                    [-sin_alpha,  cos_alpha,0,0,0,0,0,0],
-                    [0,0,cos_alpha, sin_alpha,0,0,0,0],
-                    [0,0,-sin_alpha,  cos_alpha,0,0,0,0],
-                    [0,0,0,0,cos_alpha, sin_alpha,0,0],
-                    [0,0,0,0,-sin_alpha,  cos_alpha,0,0],
-                    [0,0,0,0,0,0,cos_alpha, sin_alpha],
-                    [0,0,0,0,0,0,-sin_alpha,  cos_alpha]]
+        T_MTX = [[cos_alpha, -sin_alpha,0,0,0,0,0,0],
+                 [sin_alpha,  cos_alpha,0,0,0,0,0,0],
+                 [0,0,cos_alpha, -sin_alpha,0,0,0,0],
+                 [0,0,sin_alpha,  cos_alpha,0,0,0,0],
+                 [0,0,0,0,cos_alpha, -sin_alpha,0,0],
+                 [0,0,0,0,sin_alpha,  cos_alpha,0,0],
+                 [0,0,0,0,0,0,cos_alpha, -sin_alpha],
+                 [0,0,0,0,0,0,sin_alpha,  cos_alpha]]
 
         return     T_MTX 
     
@@ -146,8 +134,8 @@ class FETS1D52L4ULRH(FETSEval):
         '''
         # length in x-direction
         L = sqrt((X[3,0]-X[0,0])**2+(X[3,1]-X[0,1])**2)
-        print 'X',X
-        print 'L',L
+        #print 'X',X
+        #print 'L',L
 
         # generate the shape functions of the form
         # N[0], N[1], N[2], N[3]
@@ -166,7 +154,7 @@ class FETS1D52L4ULRH(FETSEval):
                        [    0, 0, 0, 0, 1. / L, 0, -1. / L, 0], # eps_2
                        ], dtype = float_)
         return dot(B_mtx,self.get_T_mtx(X))
-        
+        #return B_mtx
     def get_eps1(self, sctx, u, *args, **kw):
         '''Get strain in phase 1.
         '''  
@@ -219,16 +207,16 @@ def example():
 
     stiffness_concrete = 34000 * 0.03 * 0.03
     A_fiber = 1.
-    E_fiber = 1.
+    E_fiber = 1000000.
     stiffness_fiber = E_fiber * A_fiber
 
     d = 2 * sqrt(Pi)
     tau_max = 0.1 * d * Pi
-    G = 100
+    G = 10000000
     u_max = 0.023
     f_max = 1
     mats_eval = MATS1D5Bond(mats_phase1 = MATS1DElastic(E = stiffness_fiber),
-                             mats_phase2 = MATS1DElastic(E = 0),
+                             mats_phase2 = MATS1DElastic(E = 10000),
                              mats_ifslip = MATS1DPlastic(E = G,
                                                           sigma_y = tau_max,
                                                           K_bar = 0.,
@@ -248,7 +236,7 @@ def example():
          bcond_list = [
                         #BCSlice(var = 'u', value = 0., dims = [1],
                         #         slice = domain[ 0, :, 0, :]),
-                        BCSlice(var = 'u', value = 0., dims = [0],
+                        BCSlice(var = 'u', value = 0., dims = [1],
                                  slice = domain[:,0 ,:, 0]),
                         BCSlice(var = 'u', value = f_max, dims = [1],
                                  slice = domain[ :, -1, :, -1])
