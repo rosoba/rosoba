@@ -38,11 +38,9 @@ from ibvpy.fets.fets2D import FETS2D4Q8U
 
 from e_09_fets_crack import FETS1D52L4ULRH
 
-from ibvpy.mats.mats1D import \
-    MATS1DDamage, MATS1DPlastic, MATS1DElastic
+from ibvpy.mats.mats1D import MATS1DElastic
 
-from ibvpy.mats.mats1D5.mats1D5_bond import \
-    MATS1D5Bond
+from ibvpy.mats.mats1D5.mats1D5_bond import MATS1D5Bond
     
 from ibvpy.mats.mats2D.mats2D_elastic.mats2D_elastic import MATS2DElastic
 
@@ -59,9 +57,9 @@ class FoldedBondTest(IBVModel):
     #===========================================================================
     L1 = Float(0.2, desc = 'Length of the left part')
     L2 = Float(0.2, desc = 'Length of the right part')
-    alpha = Float(math.pi / 2.0 / 3.0, desc = 'Fold angle')
+    alpha = Float(0.0, desc = 'Fold angle')
     d = Float(0.01, desc = 'thickness of the plate')
-    h = Float(0.01, desc = 'width of the plate')
+    h = Float(0.005, desc = 'width of the crack')
 
     #===========================================================================
     # Discretization parameters
@@ -89,31 +87,9 @@ class FoldedBondTest(IBVModel):
     # material parameters:  E-modulus, Poisson's ratio
     #-----------------------------------------------------------
     E_concrete = Float(28e5, input = True)
-
     nu_concrete = Float(0.2, input = True)
 
-    E_composite = Float(28e5, input = True)
-    
-    nu_composite = Float(0.2, input = True)
-    
-    E_steel = Float(28e5, input = True)
 
-    nu_steel = Float(0.2, input = True)
-    
-    
-    stiffness_crack = Float (34000 * 0.03 * 0.03, input = True)
-    A_fiber = Float (1., input = True)
-    E_fiber = Float (1., input = True)
-    stiffness_fiber = 12
-
-
-    tau_max_crack = Float (1.* math.sqrt(math.pi)*2 * math.pi, input = True)
-    G_crack = Float (1., input = True)
-    u_max = Float (0.23, input = True)
-    f_max = Float (0.2, input = True)
-    
-    
-    
     
     
     #-----------------
@@ -136,16 +112,7 @@ class FoldedBondTest(IBVModel):
                                                       mats_ifslip = MATS1DElastic(E = 1e+6),
                                                       mats_ifopen = MATS1DElastic(E = 1e+10)))
     
-    fets_grouting = Property(Instance(FETSEval),
-                                 depends_on = 'E_concrete,nu_concrete')
-    @cached_property
-    def _get_fets_grouting(self):
-        return FETS2D4Q8U(mats_eval =  MATS2DElastic(
-                                                      E = self.E_concrete,
-                                                      nu = self.nu_concrete,
-                                                      ))    
-
-
+   
     fets_concrete = Property(Instance(FETSEval),
                                 depends_on = 'E_,nu')
     @cached_property
@@ -164,39 +131,28 @@ class FoldedBondTest(IBVModel):
                       for i in range(0, 4) ])
         return np.dot(Nr.T, X)
     
-   
-    
-      
     def gt_plate_left(self, points):
-        X1 = np.array([[-self.L2-0.0001, 0], [0, 0], [0, self.d], [-self.L2-0.0001, self.d]], dtype = 'f')
+        X1 = np.array([[0, 0], [self.L1, 0], [self.L1, self.d], [0, self.d]], dtype = 'f')
         T = np.array([[ math.cos(self.alpha), math.sin(self.alpha)],
                       [ -math.sin(self.alpha), math.cos(self.alpha)]], dtype = 'f')
         X1 = np.dot(X1, T)
         return self.N_transform(points, X1)
     
-    def gt_crack_left(self,points):
-        X= np.array([[-0.0001,0],[0,0],[0,self.d],[-0.0001,self.d]], dtype ='f')
+    def gt_crack(self,points):
+        X1= np.array([[self.L1,0],[self.L1+self.h,0],[self.L1+self.h,self.d],[self.L1,self.d]], dtype ='f')
         T = np.array([[ math.cos(self.alpha), math.sin(self.alpha)],
                       [ -math.sin(self.alpha), math.cos(self.alpha)]], dtype = 'f')
-        X = np.dot(X, T)
-        return self.N_transform(points, X)
-        
-        
-    def gt_grouting(self, points):
-        X2 = np.array([[0, 0], [self.h, 0], [self.h, self.d],
-                       [-self.d * math.sin(self.alpha), self.d * math.cos(self.alpha)]], dtype = 'f')
-        return self.N_transform(points, X2)
+        X1 = np.dot(X1, T)
+        return self.N_transform(points, X1)
     
-    def gt_crack_right(self,points): 
-        X= np.array([[self.h,0],[self.h+0.0001,0],[self.h+0.0001,self.d],[self.h,self.d]],dtype='f')
-        return self.N_transform(points, X)
-        
     
     def gt_plate_right(self, points):
-        X3 = np.array([[self.h+0.0001, 0], [self.L1 + self.h, 0],
-                       [self.L1 + self.h, self.d], [self.h+0.0001, self.d]], dtype = 'f')
-        return self.N_transform(points, X3)
-        
+        X1 = np.array([[self.L1+self.h, 0], [self.L1+self.h+self.L2, 0],
+                       [self.L1 + self.h+self.L2, self.d], [self.L1+self.h, self.d]], dtype = 'f')
+        T = np.array([[ math.cos(self.alpha), math.sin(self.alpha)],
+                      [ -math.sin(self.alpha), math.cos(self.alpha)]], dtype = 'f')
+        X1 = np.dot(X1, T)
+        return self.N_transform(points, X1)
     
         
     fe_domain = Property
@@ -221,59 +177,24 @@ class FoldedBondTest(IBVModel):
                           geo_transform = self.gt_plate_left,
                           level = self.fe_rg1)
     
-    fe_crack_left = Property
-    @cached_property
-    def _get_fe_crack_left (self):
-        return FERefinementGrid(name = 'rg4',
-                                fets_eval = self.fets_crack,
-                                domain = self.fe_domain)
-    
-    fe_grid_crack_left = Property
-    @cached_property
-    def _get_fe_grid_crack_left (self):
-        return FEGrid(coord_min = (-1., -1.),
-                          coord_max = (1., 1.),
-                          shape = (self.n_x, self.n_z),
-                          fets_eval = self.fets_crack,
-                          geo_transform = self.gt_crack_left,
-                          level = self.fe_crack_left)
-    
-    
-    
     fe_rg2 = Property
-    @cached_property 
-    def _get_fe_rg2(self):
+    @cached_property
+    def _get_fe_rg2 (self):
         return FERefinementGrid(name = 'rg2',
-                                fets_eval = self.fets_concrete,
+                                fets_eval = self.fets_crack,
                                 domain = self.fe_domain)
     
     fe_grid2 = Property
-    @cached_property 
+    @cached_property
     def _get_fe_grid2(self):
-        return FEGrid(coord_min = (-1., -1.),
-                          coord_max = (1., 1.),
-                          shape = (1, self.n_z),
-                          fets_eval = self.fets_concrete,
-                          geo_transform = self.gt_grouting,
-                          level = self.fe_rg2)
-    
-    
-    fe_crack_right = Property
-    @cached_property
-    def _get_fe_crack_right (self):
-        return FERefinementGrid(name = 'rg5',
-                                fets_eval = self.fets_crack,
-                                domain = self.fe_domain)
-    
-    fe_grid_crack_right = Property
-    @cached_property
-    def _get_fe_grid_crack_right (self):
         return FEGrid(coord_min = (-1., -1.),
                           coord_max = (1., 1.),
                           shape = (self.n_x, self.n_z),
                           fets_eval = self.fets_crack,
-                          geo_transform = self.gt_crack_right,
-                          level = self.fe_crack_right)    
+                          geo_transform = self.gt_crack,
+                          level = self.fe_rg2)
+    
+    
     
     fe_rg3 = Property
     @cached_property
@@ -298,71 +219,47 @@ class FoldedBondTest(IBVModel):
     tloop = Property()
     @cached_property
     def _get_tloop(self):
-    
         self.fe_grid1
         self.fe_grid2
         self.fe_grid3
-        self.fe_crack_left
-        self.fe_crack_right
         print 'count dofs', self.fe_domain.n_dofs
        
-        bc_fixed_botton = BCSlice(var = 'u', value = 0., dims = [0, 1],
-                           slice = self.fe_grid1[:, 0, :, 0])
-        bc_fixed_top = BCSlice(var = 'u', value = 0.,dims =[0,1],
-                               slice = self.fe_grid1[:,-1,:,-1])
+        bc_fixed = BCSlice(var = 'u', value = 0., dims = [0, 1],
+                           slice = self.fe_grid1[0, :, 0, :])
         
     
-        bc_link_1_crack_left = BCSlice(var = 'u',
+        bc_link_plate_left_crack = BCSlice(var = 'u',
                                       value = 0.,
                                       dims = [0, 1],
                                       slice = self.fe_grid1[-1, :, -1, :],
                                       link_coeffs = [1.0, 1.0],
                                       link_dims = [0, 1],
-                                      link_slice = self.fe_grid_crack_left[:, -1, :, -1])
+                                      link_slice = self.fe_grid2[:, -1, :, -1])
         
-        bc_link_crack_left_2 = BCSlice(var = 'u',
+        bc_link_crack_plate_right = BCSlice(var = 'u',
                                       value = 0.,
                                       dims = [0, 1],
-                                      slice = self.fe_grid_crack_left[:, 0, :, 0],
+                                      slice = self.fe_grid2[:, 0, :, 0],
                                       link_coeffs = [1.0, 1.0],
                                       link_dims = [0, 1],
-                                      link_slice = self.fe_grid2[0, :, 0, :])
+                                      link_slice = self.fe_grid3[0, :, 0, :])
         
         
-        bc_link_2_crack_right = BCSlice(var = 'u',
-                                       value = 0.,
-                                       dims = [0, 1],
-                                       slice = self.fe_grid2[-1, :, -1, :],
-                                       link_coeffs = [1.0, 1.0],
-                                       link_dims = [0, 1],
-                                       link_slice = self.fe_grid_crack_right[:, -1, :, -1])
-       
-        bc_link_crack_right_3 = BCSlice(var = 'u',
-                                        value = 0.,
-                                        dims = [0, 1],
-                                        slice = self.fe_grid_crack_right[:, 0, :, 0],
-                                        link_coeffs = [1.0, 1.0],
-                                        link_dims = [0, 1],
-                                        link_slice = self.fe_grid3[0, :, 0, :])
-       
         mf = MFnLineArray(xdata = np.array([0, 0.1, 0.6, 1], dtype = 'f'),
                           ydata = np.array([0, 0.4, -0.5, 1], dtype = 'f'))
     
-        bc_load2 = BCSlice(var = 'u', value = -0.005, dims = [1], time_function = mf.get_value,
+        bc_load = BCSlice(var = 'u', value = -0.005, dims = [1], time_function = mf.get_value,
                           slice = self.fe_grid3[-1, -1, -1, -1 ])
     
         load_dofs = self.fe_grid3[-1, -1, :, -1 ].dofs[:, :, 1].flatten()
         
         tstepper = TS(sdomain = self.fe_domain,
-                       bcond_list = [bc_fixed_botton,
-                                     bc_fixed_top,
-                                     bc_link_1_crack_left,
-                                     bc_link_crack_left_2,
-                                     bc_link_2_crack_right,
-                                     bc_link_crack_right_3,
-                                     bc_load2,
-                                      ],
-             rtrace_list = [
+                       bcond_list = [bc_fixed,
+                                     bc_link_plate_left_crack,
+                                     bc_link_crack_plate_right,
+                                     bc_load,
+                                    ],
+        rtrace_list = [
                          RTraceGraph(name = 'Fi,right over u_right (iteration)' ,
                                    var_y = 'F_int', idx_y_arr = load_dofs,
                                    var_x = 'U_k', idx_x = load_dofs[-1],
@@ -408,7 +305,7 @@ class FoldedBondTest(IBVModel):
 
 if __name__ == '__main__':
 
-    fbt = FoldedBondTest( n_x = 5, n_z = 3)
+    fbt = FoldedBondTest()
 
     fbt.tloop.eval()
 

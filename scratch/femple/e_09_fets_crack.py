@@ -14,6 +14,9 @@ from ibvpy.mats.mats1D import \
 from ibvpy.mats.mats1D5.mats1D5_bond import \
     MATS1D5Bond
 
+import numpy as np
+import scipy.linalg as la
+
 from numpy import array, dot, identity, zeros, float_, ix_, transpose as T
 from math import fabs, pi as Pi, sqrt, sin, cos
 #-----------------------------------------------------------------------------
@@ -61,25 +64,20 @@ class FETS1D52L4ULRH(FETSEval):
     '''
     
     def get_T_mtx (self,X):
-        delta_Y = abs(X[3,1]-X[0,1]) 
-        delta_X = abs(X[3,0]-X[0,0])
-        sin_alpha = (delta_Y/(sqrt(delta_Y**2 + delta_X**2 ))) 
-        cos_alpha = (delta_X/(sqrt(delta_Y**2 + delta_X**2 ))) 
-        #cos_alpha = cos(0)
-        #sin_alpha = sin(0)
+        delta_Y = abs(X[1,1]-X[0,1]) 
+        delta_X = abs(X[1,0]-X[0,0])
+        L = sqrt(delta_Y**2 + delta_X**2 )
+        #sa = delta_Y/ L 
+        #ca = delta_X/ L 
+        ca = cos(Pi)
+        sa = sin(Pi)
         '''
         Testen, ob modul sich dreht, alle Funktionen sind auskommentiert!!!!!
         '''
-        T_MTX = [[cos_alpha, -sin_alpha,0,0,0,0,0,0],
-                 [sin_alpha,  cos_alpha,0,0,0,0,0,0],
-                 [0,0,cos_alpha, -sin_alpha,0,0,0,0],
-                 [0,0,sin_alpha,  cos_alpha,0,0,0,0],
-                 [0,0,0,0,cos_alpha, -sin_alpha,0,0],
-                 [0,0,0,0,sin_alpha,  cos_alpha,0,0],
-                 [0,0,0,0,0,0,cos_alpha, -sin_alpha],
-                 [0,0,0,0,0,0,sin_alpha,  cos_alpha]]
-
-        return     T_MTX 
+        T = np.array( [[ ca, sa],
+                       [ -sa, ca]], dtype = 'f')
+        T_mtx = la.block_diag(T,T,T,T)
+        return T_mtx 
     
     def _get_ip_coords(self):
         offset = 1e-6
