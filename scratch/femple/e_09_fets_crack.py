@@ -17,8 +17,9 @@ from ibvpy.mats.mats1D5.mats1D5_bond import \
 import numpy as np
 import scipy.linalg as la
 
-from numpy import array, dot, identity, zeros, float_, ix_, transpose as T
+from numpy import array, dot, zeros, float_
 from math import fabs, pi as Pi, sqrt, sin, cos
+import math
 #-----------------------------------------------------------------------------
 # FEBond
 #-----------------------------------------------------------------------------
@@ -42,17 +43,17 @@ class FETS1D52L4ULRH(FETSEval):
     A_phase_2 = Float(1.0, desc = 'Cross sectional area of phase 2')
 
     # Node position distribution
-    dof_r = Array(value = [[-1, -1], 
-                           [1, -1], 
-                           [1, 1], 
+    dof_r = Array(value = [[-1, -1],
+                           [1, -1],
+                           [1, 1],
                            [-1, 1]])
-    geo_r = Array(value = [[-1, -1], 
-                           [1, -1], 
-                           [1, 1], 
+    geo_r = Array(value = [[-1, -1],
+                           [1, -1],
+                           [1, 1],
                            [-1, 1]])
-    vtk_r = Array(value = [[-1, -1], 
-                           [1, -1], 
-                           [1, 1], 
+    vtk_r = Array(value = [[-1, -1],
+                           [1, -1],
+                           [1, 1],
                            [-1, 1]])
     vtk_cells = [[0, 1], [1, 2], [2, 3], [3, 0]]
     vtk_cell_types = 'Line'
@@ -62,29 +63,38 @@ class FETS1D52L4ULRH(FETSEval):
     - T_max testen
     - Element einbauen
     '''
+        
+    alpha = Float(0.0)
     
-    def get_T_mtx (self,X):
-        delta_Y = abs(X[1,1]-X[0,1]) 
-        delta_X = abs(X[1,0]-X[0,0])
-        L = sqrt(delta_Y**2 + delta_X**2 )
-        #sa = delta_Y/ L 
-        #ca = delta_X/ L 
-        ca = cos(Pi)
-        sa = sin(Pi)
+    T_mtx = Property(depends_on = 'alpha')
+    @cached_property
+    def _get_T_mtx(self):
+        sa = math.sin(self.alpha) 
+        ca = math.cos(self.alpha)
+        T = np.array([[ ca, sa],
+                      [ -sa, ca]], dtype = 'f')
+        T_mtx = la.block_diag(T, T, T, T)
+        return T_mtx         
+    
+    def get_T_mtx (self, X):
         '''
-        Testen, ob modul sich dreht, alle Funktionen sind auskommentiert!!!!!
         '''
-        T = np.array( [[ ca, sa],
-                       [ -sa, ca]], dtype = 'f')
-        T_mtx = la.block_diag(T,T,T,T)
+        delta_Y = abs(X[1, 1] - X[0, 1]) 
+        delta_X = abs(X[1, 0] - X[0, 0])
+        L = sqrt(delta_Y ** 2 + delta_X ** 2)
+        sa = delta_Y / L 
+        ca = delta_X / L 
+        T = np.array([[ ca, sa],
+                      [ -sa, ca]], dtype = 'f')
+        T_mtx = la.block_diag(T, T, T, T)
         return T_mtx 
     
     def _get_ip_coords(self):
         offset = 1e-6
-        return  array([[-1 + offset, 0., 0.], [1 - offset, 0., 0.]])
+        return  np.array([[-1 + offset, 0., 0.], [1 - offset, 0., 0.]])
 
     def _get_ip_weights(self):
-        return array([[1.], [1.]], dtype = float)
+        return np.array([[1.], [1.]], dtype = float)
 
     def get_N_geo_mtx(self, r_pnt):
         '''
@@ -95,7 +105,7 @@ class FETS1D52L4ULRH(FETSEval):
         Nr = array([[1 / 4. * (1 + r_pnt[0] * cx[i, 0]) * (1 + r_pnt[1] * cx[i, 1])
                       for i in range(0, 4) ]], dtype = float_)
         return Nr
-
+    
     def get_N_mtx(self, r_pnt):
         '''
         Return shape functions
@@ -122,7 +132,8 @@ class FETS1D52L4ULRH(FETSEval):
 
         N_mtx[0, 0:7:2] = N_geo_mtx
         N_mtx[1, 1:8:2] = N_geo_mtx
-        return N_mtx
+
+        return np.dot(N_mtx, self.T_mtx)
 
     def get_B_mtx(self, r, X):
         '''
@@ -131,7 +142,7 @@ class FETS1D52L4ULRH(FETSEval):
         @param X:global coordinates
         '''
         # length in x-direction
-        L = sqrt((X[3,0]-X[0,0])**2+(X[3,1]-X[0,1])**2)
+        L = sqrt((X[3, 0] - X[0, 0]) ** 2 + (X[3, 1] - X[0, 1]) ** 2)
         #print 'X',X
         #print 'L',L
 
@@ -151,8 +162,9 @@ class FETS1D52L4ULRH(FETSEval):
                        [    0, N[0], 0, N[1], 0, -N[2], 0, -N[3]], # opening
                        [    0, 0, 0, 0, 1. / L, 0, -1. / L, 0], # eps_2
                        ], dtype = float_)
-        return dot(B_mtx,self.get_T_mtx(X))
-        #return B_mtx
+        
+        return dot(B_mtx, self.T_mtx) # self.get_T_mtx(X))
+        
     def get_eps1(self, sctx, u, *args, **kw):
         '''Get strain in phase 1.
         '''  
@@ -210,7 +222,7 @@ def example():
 
     d = 2 * sqrt(Pi)
     tau_max = 0.1 * d * Pi
-    G = 10000000
+    G = 1000
     u_max = 0.023
     f_max = 1
     mats_eval = MATS1D5Bond(mats_phase1 = MATS1DElastic(E = stiffness_fiber),
@@ -219,11 +231,20 @@ def example():
                                                           sigma_y = tau_max,
                                                           K_bar = 0.,
                                                           H_bar = 0.),
-                             mats_ifopen = MATS1DElastic(E = 10))
+                             mats_ifopen = MATS1DElastic(E = 100000))
 
-    fets_eval = FETS1D52L4ULRH(mats_eval = mats_eval)
-    domain = FEGrid( coord_max = (1., 0.2),
+    alpha = -Pi / 2.0 
+
+    fets_eval = FETS1D52L4ULRH(mats_eval = mats_eval, alpha = alpha)
+
+    def geo(points):
+        T = np.array([[ math.cos(alpha), math.sin(alpha)],
+                      [ -math.sin(alpha), math.cos(alpha)]], dtype = 'f')
+        return np.dot(points, T)
+        
+    domain = FEGrid(coord_max = (1., 0.2),
                      shape = (1, 1),
+                     geo_transform = geo,
                      fets_eval = fets_eval)
 
     end_dof = domain[-1, 0, -1, 0 ].dofs[0, 0, 0]
@@ -234,9 +255,9 @@ def example():
          bcond_list = [
                         #BCSlice(var = 'u', value = 0., dims = [1],
                         #         slice = domain[ 0, :, 0, :]),
-                        BCSlice(var = 'u', value = 0., dims = [1],
-                                 slice = domain[:,0 ,:, 0]),
-                        BCSlice(var = 'u', value = f_max, dims = [1],
+                        BCSlice(var = 'u', value = 0., dims = [0, 1],
+                                 slice = domain[:, 0 , :, 0]),
+                        BCSlice(var = 'u', value = f_max, dims = [0],
                                  slice = domain[ :, -1, :, -1])
                         ],
          rtrace_list = [ RTraceGraph(name = 'Fi,right over u_right (iteration)' ,
