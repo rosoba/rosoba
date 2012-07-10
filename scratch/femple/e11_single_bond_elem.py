@@ -64,8 +64,8 @@ class FoldedBondTest(IBVModel):
     #===========================================================================
     # Discretization parameters
     #===========================================================================
-    n_z = Int(1, desc = 'number of elements in the thickness direction')
-    n_x = Int(1, desc = 'number of elements in the length direction of a plate')
+    n_z = Int(3, desc = 'number of elements in the thickness direction')
+    n_x = Int(10, desc = 'number of elements in the length direction of a plate')
 
     view = View(Item('L1', label = 'length of fixed part'),
                 Item('L2', label = 'length of the loaded part'),
@@ -84,8 +84,8 @@ class FoldedBondTest(IBVModel):
     def _get_fets_bond (self):
         return FETS1D5t2L4ULRH(mats_eval = MATS1D5Bond(mats_phase1 = MATS1DElastic(E = 0),
                                                       mats_phase2 = MATS1DElastic(E = 0),
-                                                      mats_ifslip = MATS1DElastic(E = 10.0),
-                                                      mats_ifopen = MATS1DElastic(E = 1.0)),
+                                                      mats_ifslip = MATS1DElastic(E = 100.0),
+                                                      mats_ifopen = MATS1DElastic(E = 100.0)),
                               alpha = self.alpha)
        
     fets_concrete = Property(Instance(FETSEval),
@@ -199,7 +199,7 @@ class FoldedBondTest(IBVModel):
         print 'count dofs', self.fe_domain.n_dofs
        
         bc_fixed = BCSlice(var = 'u', value = 0., dims = [0, 1],
-                           slice = self.fe_grid3[:, -1, :, -1])
+                           slice = self.fe_grid1[:, 0, :, 0])
 
         bc_link_plate_left_crack = BCDofGroup(var = 'u',
                                               value = 0.,
@@ -219,9 +219,9 @@ class FoldedBondTest(IBVModel):
                                               get_link_dof_method = self.fe_grid3.get_bottom_dofs
                                               )
     
-        bc_load = BCSlice(var = 'u', value = -1.0, dims = [0], # time_function = mf.get_value,
-                          integ_domain = 'local',
-                          slice = self.fe_grid1[:, 0, :, 0 ])
+        bc_load = BCSlice(var = 'u', value = -00.1, dims = [1], # time_function = mf.get_value,
+#                          integ_domain = 'local',
+                          slice = self.fe_grid3[-1, -1, -1, -1 ])
     
         tstepper = TS(sdomain = self.fe_domain,
                        bcond_list = [bc_fixed,
@@ -253,7 +253,7 @@ class FoldedBondTest(IBVModel):
 if __name__ == '__main__':
 
     fbt = FoldedBondTest(
-                         alpha = -math.pi / 2.0
+                         alpha = -math.pi / 2.0 * 0.2
                          )
 
     fbt.tloop.eval()
