@@ -14,17 +14,16 @@ from ibvpy.mats.mats1D import \
 from ibvpy.mats.mats1D5.mats1D5_bond import \
     MATS1D5Bond
 
+from ibvpy.fets.fets2D import FETS2D4Q
+
 import numpy as np
 import scipy.linalg as la
 
 from numpy import array, dot, zeros, float_
 from math import fabs, pi as Pi, sqrt, sin, cos
 import math
-#-----------------------------------------------------------------------------
-# FEBond
-#-----------------------------------------------------------------------------
 
-class FETS1D52L4ULRH(FETSEval):
+class FETS1D5t2L4ULRH(FETSEval):
     '''
     Fe Bar 2 nodes, deformation
     '''
@@ -64,18 +63,6 @@ class FETS1D52L4ULRH(FETSEval):
     - Element einbauen
     '''
         
-    alpha = Float(0.0)
-    
-    T_mtx = Property(depends_on = 'alpha')
-    @cached_property
-    def _get_T_mtx(self):
-        sa = math.sin(self.alpha) 
-        ca = math.cos(self.alpha)
-        T = np.array([[ ca, sa],
-                      [ -sa, ca]], dtype = 'f')
-        T_mtx = la.block_diag(T, T, T, T)
-        return T_mtx         
-    
     def get_T_mtx (self, X):
         '''
         '''
@@ -133,8 +120,14 @@ class FETS1D52L4ULRH(FETSEval):
         N_mtx[0, 0:7:2] = N_geo_mtx
         N_mtx[1, 1:8:2] = N_geo_mtx
 
-        return np.dot(N_mtx, self.T_mtx)
+        return N_mtx
 
+    def _get_L(self, X_mtx):
+        return sqrt((X_mtx[1, 0] - X_mtx[0, 0]) ** 2 + (X_mtx[1, 1] - X_mtx[0, 1]) ** 2)
+
+    def _get_J_det(self, r_pnt, X_mtx):
+        return self._get_L(X_mtx) / 2.
+    
     def get_B_mtx(self, r, X):
         '''
         Return kinematic matrix
@@ -142,9 +135,7 @@ class FETS1D52L4ULRH(FETSEval):
         @param X:global coordinates
         '''
         # length in x-direction
-        L = sqrt((X[3, 0] - X[0, 0]) ** 2 + (X[3, 1] - X[0, 1]) ** 2)
-        #print 'X',X
-        #print 'L',L
+        L = self._get_L(X)
 
         # generate the shape functions of the form
         # N[0], N[1], N[2], N[3]
@@ -163,7 +154,8 @@ class FETS1D52L4ULRH(FETSEval):
                        [    0, 0, 0, 0, 1. / L, 0, -1. / L, 0], # eps_2
                        ], dtype = float_)
         
-        return dot(B_mtx, self.T_mtx) # self.get_T_mtx(X))
+        Bt_mtx = dot(B_mtx, self.get_T_mtx(X)) 
+        return Bt_mtx
         
     def get_eps1(self, sctx, u, *args, **kw):
         '''Get strain in phase 1.
@@ -188,15 +180,13 @@ class FETS1D52L4ULRH(FETSEval):
         return slip
 
     def _rte_dict_default(self):
-        rte_dict = super(FETS1D52L4ULRH, self)._rte_dict_default()
+        rte_dict = super(FETS1D5t2L4ULRH, self)._rte_dict_default()
         del rte_dict['eps_app'] # the epsilon does not have a form of a tensor
         rte_dict['slip'] = RTraceEvalElemFieldVar(eval = self.get_slip, ts = self)
         rte_dict['eps1'] = RTraceEvalElemFieldVar(eval = self.get_eps1, ts = self)
         rte_dict['eps2'] = RTraceEvalElemFieldVar(eval = self.get_eps2, ts = self)
         return rte_dict
 
-    def _get_J_det(self, r_pnt3d, X_mtx):
-        return (X_mtx[1, 0] - X_mtx[0, 0]) / 2.
 
 def _get_one_if_same_sign(a, b):
     '''Helper function returning 1 if sign(a) == sign(b)
@@ -235,7 +225,9 @@ def example():
 
     alpha = -Pi / 2.0 
 
-    fets_eval = FETS1D52L4ULRH(mats_eval = mats_eval, alpha = alpha)
+    fets_eval = FETS1D5t2L4ULRH(mats_eval = mats_eval, alpha = alpha)
+
+    print 'T_mtx', fets_eval.T_mtx
 
     def geo(points):
         T = np.array([[ math.cos(alpha), math.sin(alpha)],
