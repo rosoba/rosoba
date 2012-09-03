@@ -8,6 +8,7 @@
 		<project>mathkit</project>
 		<project>matresdev</project>
 		<project>quaducom</project>
+		<project>spirrid</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>
