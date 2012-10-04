@@ -321,6 +321,9 @@ class FoldedBondTest(IBVModel):
                             link_dims = [0, 1],
                             link_slice = self.fe_grid3[0, :, 0, :])
        
+
+            self.ls_counter += 1
+            self.report_load_step_start()
         
         mf = MFnLineArray(xdata = np.array([0, 0.1, 0.6, 1], dtype = 'f'),
                           ydata = np.array([0, 0.4, -0.5, 1], dtype = 'f'))

@@ -304,8 +304,6 @@ class FoldedBondTest(IBVModel):
         self.fe_grid3
         self.fe_crack_left
         self.fe_crack_right
-        print 'count dofs', self.fe_domain.n_dofs
-       
         bc_fixed_botton = BCSlice(var = 'u', value = 0., dims = [0, 1],
                            slice = self.fe_grid1[:, 0, :, 0])
         bc_fixed_top = BCSlice(var = 'u', value = 0., dims = [0, 1],
