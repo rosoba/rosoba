@@ -97,10 +97,10 @@ class FoldedBondTest(IBVModel):
     nu_composite = Float(0.2, input = True)
     
     E_concrete_tex = Float(33071625000, input = True)
-    nu_concrete_tex = Float(0.2,input = True)
+    nu_concrete_tex = Float(0.2, input = True)
     
     E_composite_tex = Float(11732000000, input = True)
-    nu_composite_tex = Float(0.2,input = True)
+    nu_composite_tex = Float(0.2, input = True)
     
     stiffness_crack = Float (34000 * 0.03 * 0.03, input = True)
     A_fiber = Float (1., input = True)
@@ -174,14 +174,14 @@ class FoldedBondTest(IBVModel):
         return np.dot(Nr.T, X)
     
     def gt_plate_left_top(self, points):
-        X1 = np.array([[-self.L1, 2*self.h1], [-0.0001,2*self.h1], [-0.0001, 3*self.h1], [-self.L1, 3*self.h1]], dtype = 'f')
+        X1 = np.array([[-self.L1, 2 * self.h1], [-0.0001, 2 * self.h1], [-0.0001, 3 * self.h1], [-self.L1, 3 * self.h1]], dtype = 'f')
         T = np.array([[ math.cos(self.alpha), math.sin(self.alpha)],
                       [ -math.sin(self.alpha), math.cos(self.alpha)]], dtype = 'f')
         X1 = np.dot(X1, T)
         return self.N_transform(points, X1)
     
     def gt_plate_left_tex(self, points):
-        X1 = np.array([[-self.L1, self.h1], [0, self.h1], [0, 2*self.h1], [-self.L1, 2*self.h1]], dtype = 'f')
+        X1 = np.array([[-self.L1, self.h1], [0, self.h1], [0, 2 * self.h1], [-self.L1, 2 * self.h1]], dtype = 'f')
         T = np.array([[ math.cos(self.alpha), math.sin(self.alpha)],
                       [ -math.sin(self.alpha), math.cos(self.alpha)]], dtype = 'f')
         X1 = np.dot(X1, T)
@@ -195,20 +195,20 @@ class FoldedBondTest(IBVModel):
         return self.N_transform(points, X1)
     
     def gt_crack_left(self, points):
-        X = np.array([[-0.0001, 2*self.h1], [0,2*self.h1], [0, 3*self.h1], [-0.0001, 3*self.h1]], dtype = 'f')
+        X = np.array([[-0.0001, 2 * self.h1], [0, 2 * self.h1], [0, 3 * self.h1], [-0.0001, 3 * self.h1]], dtype = 'f')
         T = np.array([[ math.cos(self.alpha), math.sin(self.alpha)],
                       [ -math.sin(self.alpha), math.cos(self.alpha)]], dtype = 'f')
         X = np.dot(X, T)
         return self.N_transform(points, X)
             
     def gt_grouting_top(self, points):
-        X2 = np.array([[-2*self.h1 * math.sin(self.alpha), 2*self.h1 * math.cos(self.alpha)], [0.006,2*self.h1], [0.006, 3*self.h1],
-                       [-3*self.h1 * math.sin(self.alpha), 3*self.h1 * math.cos(self.alpha)]], dtype = 'f')
+        X2 = np.array([[-2 * self.h1 * math.sin(self.alpha), 2 * self.h1 * math.cos(self.alpha)], [0.006, 2 * self.h1], [0.006, 3 * self.h1],
+                       [-3 * self.h1 * math.sin(self.alpha), 3 * self.h1 * math.cos(self.alpha)]], dtype = 'f')
         return self.N_transform(points, X2)
     
     def gt_grouting_tex(self, points):
-        X2 = np.array([[-self.h1 * math.sin(self.alpha), self.h1 * math.cos(self.alpha)], [0.006,self.h1], [0.006, 2*self.h1],
-                       [-2*self.h1 * math.sin(self.alpha), 2*self.h1 * math.cos(self.alpha)]], dtype = 'f')
+        X2 = np.array([[-self.h1 * math.sin(self.alpha), self.h1 * math.cos(self.alpha)], [0.006, self.h1], [0.006, 2 * self.h1],
+                       [-2 * self.h1 * math.sin(self.alpha), 2 * self.h1 * math.cos(self.alpha)]], dtype = 'f')
         return self.N_transform(points, X2)
     
     def gt_grouting_bottom(self, points):
@@ -217,22 +217,22 @@ class FoldedBondTest(IBVModel):
         return self.N_transform(points, X2)
     
     def gt_crack_right(self, points): 
-        X = np.array([[0.006+0.0001,2*self.h1], [0.006,2*self.h1], [0.006, 3*self.h1], [0.006+0.0001, 3*self.h1]], dtype = 'f')
+        X = np.array([[0.006 + 0.0001, 2 * self.h1], [0.006, 2 * self.h1], [0.006, 3 * self.h1], [0.006 + 0.0001, 3 * self.h1]], dtype = 'f')
         return self.N_transform(points, X)
     
     def gt_plate_right_top(self, points):
-        X3 = np.array([[0.006+0.0001,2*self.h1], [self.L1+0.006,2*self.h1],
-                       [self.L1+0.006,3*self.h1], [0.006+0.0001,3*self.h1]], dtype = 'f')
+        X3 = np.array([[0.006 + 0.0001, 2 * self.h1], [self.L1 + 0.006, 2 * self.h1],
+                       [self.L1 + 0.006, 3 * self.h1], [0.006 + 0.0001, 3 * self.h1]], dtype = 'f')
         return self.N_transform(points, X3)
     
     def gt_plate_right_tex(self, points):
-        X3 = np.array([[0.006, self.h1], [self.L1+0.006, self.h1],
-                       [self.L1+0.006, 2*self.h1], [0.006, 2*self.h1]], dtype = 'f')
+        X3 = np.array([[0.006, self.h1], [self.L1 + 0.006, self.h1],
+                       [self.L1 + 0.006, 2 * self.h1], [0.006, 2 * self.h1]], dtype = 'f')
         return self.N_transform(points, X3)
         
     def gt_plate_right_bottom(self, points):
-        X3 = np.array([[0.006, 0], [self.L1+0.006, 0],
-                       [self.L1+0.006, self.h1], [0.006, self.h1]], dtype = 'f')
+        X3 = np.array([[0.006, 0], [self.L1 + 0.006, 0],
+                       [self.L1 + 0.006, self.h1], [0.006, self.h1]], dtype = 'f')
         return self.N_transform(points, X3)
     
         
@@ -650,7 +650,7 @@ if __name__ == '__main__':
 
     fbt = FoldedBondTest(n_x = 5, n_z = 3)
 
-    fbt.tloop.eval()
+    #fbt.tloop.eval()
 
     # Put the whole thing into the simulation-framework to map the
     # individual pieces of definition into the user interface.

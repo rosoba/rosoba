@@ -30,7 +30,7 @@ from mathkit.mfn import MFnLineArray
 from os.path import exists
 
 from etsproxy.traits.ui.api \
-    import View, Item, VGroup, HGroup
+    import View, Item, VGroup, HGroup, Group
 
 from matresdev.db.exdb.ex_type import ExType
 from matresdev.db.exdb.i_ex_type import IExType
