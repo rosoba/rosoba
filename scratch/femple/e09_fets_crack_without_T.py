@@ -1,3 +1,8 @@
+'''
+Created on 04.10.2012
+
+@author: demian
+'''
 from etsproxy.traits.api import \
     Int, implements, List, Array, Property, cached_property, \
     Float, Constant
@@ -23,7 +28,7 @@ from numpy import array, dot, zeros, float_
 from math import fabs, pi as Pi, sqrt, sin, cos
 import math
 
-class FETS1D5t2L4ULRH(FETSEval):
+class FETS1D5t2L4ULRH_oT(FETSEval):
     '''
     Fe Bar 2 nodes, deformation
     '''
@@ -62,20 +67,20 @@ class FETS1D5t2L4ULRH(FETSEval):
     - T_max testen
     - Element einbauen
     '''
-
+        
     def get_T_mtx (self, X):
         '''
         '''
-        delta_Y = abs(X[1, 1] - X[0, 1])
+        delta_Y = abs(X[1, 1] - X[0, 1]) 
         delta_X = abs(X[1, 0] - X[0, 0])
         L = sqrt(delta_Y ** 2 + delta_X ** 2)
-        sa = delta_Y / L
-        ca = delta_X / L
+        sa = delta_Y / L 
+        ca = delta_X / L 
         T = np.array([[ ca, sa],
                       [ -sa, ca]], dtype = 'f')
         T_mtx = la.block_diag(T, T, T, T)
-        return T_mtx
-
+        return T_mtx 
+    
     def _get_ip_coords(self):
         offset = 1e-6
         return  np.array([[-1 + offset, 0., 0.], [1 - offset, 0., 0.]])
@@ -92,7 +97,7 @@ class FETS1D5t2L4ULRH(FETSEval):
         Nr = array([[1 / 4. * (1 + r_pnt[0] * cx[i, 0]) * (1 + r_pnt[1] * cx[i, 1])
                       for i in range(0, 4) ]], dtype = float_)
         return Nr
-
+    
     def get_N_mtx(self, r_pnt):
         '''
         Return shape functions
@@ -127,7 +132,7 @@ class FETS1D5t2L4ULRH(FETSEval):
 
     def _get_J_det(self, r_pnt, X_mtx):
         return self._get_L(X_mtx) / 2.
-
+    
     def get_B_mtx(self, r, X):
         '''
         Return kinematic matrix
@@ -146,20 +151,20 @@ class FETS1D5t2L4ULRH(FETSEval):
 
         # assemble the B matrix mapping the DOFs to strains and slip and opening
         #                  u0,   v0,   u1,  v1,  u2,    v2,   u3,   v3, 
-
-
+        
+       
         B_mtx = array([[-1. / L, 0, 1. / L, 0, 0, 0, 0, 0], # eps_1
                        [ N[0], 0, N[1], 0, -N[2], 0, -N[3], 0], # slip
                        [    0, N[0], 0, N[1], 0, -N[2], 0, -N[3]], # opening
                        [    0, 0, 0, 0, 1. / L, 0, -1. / L, 0], # eps_2
                        ], dtype = float_)
-
-        Bt_mtx = dot(B_mtx, self.get_T_mtx(X))
-        return Bt_mtx
-
+        
+        Bt_mtx = dot(B_mtx, self.get_T_mtx(X)) 
+        return B_mtx
+        
     def get_eps1(self, sctx, u, *args, **kw):
         '''Get strain in phase 1.
-        '''
+        '''  
         eps = self.get_eps_eng(sctx, u)
         eps1 = eps[ [0] ]
         return eps1
@@ -167,7 +172,7 @@ class FETS1D5t2L4ULRH(FETSEval):
     def get_eps2(self, sctx, u, *args, **kw):
         '''Get strain in phase 2.
         '''
-
+        
         eps = self.get_eps_eng(sctx, u)
         eps2 = eps[ [3] ]
         return eps2
@@ -180,7 +185,7 @@ class FETS1D5t2L4ULRH(FETSEval):
         return slip
 
     def _rte_dict_default(self):
-        rte_dict = super(FETS1D5t2L4ULRH, self)._rte_dict_default()
+        rte_dict = super(FETS1D5t2L4ULRH_oT, self)._rte_dict_default()
         del rte_dict['eps_app'] # the epsilon does not have a form of a tensor
         rte_dict['slip'] = RTraceEvalElemFieldVar(eval = self.get_slip, ts = self)
         rte_dict['eps1'] = RTraceEvalElemFieldVar(eval = self.get_eps1, ts = self)
@@ -223,7 +228,7 @@ def example():
                                                           H_bar = 0.),
                              mats_ifopen = MATS1DElastic(E = 100000))
 
-    alpha = -Pi / 2.0
+    alpha = -Pi / 2.0 
 
     fets_eval = FETS1D5t2L4ULRH(mats_eval = mats_eval, alpha = alpha)
 
@@ -233,7 +238,7 @@ def example():
         T = np.array([[ math.cos(alpha), math.sin(alpha)],
                       [ -math.sin(alpha), math.cos(alpha)]], dtype = 'f')
         return np.dot(points, T)
-
+        
     domain = FEGrid(coord_max = (1., 0.2),
                      shape = (1, 1),
                      geo_transform = geo,
@@ -282,7 +287,7 @@ def example():
     from ibvpy.plugins.ibvpy_app import IBVPyApp
     app = IBVPyApp(ibv_resource = tloop)
     app.main()
-
+    
 
 if __name__ == '__main__':
     example()
