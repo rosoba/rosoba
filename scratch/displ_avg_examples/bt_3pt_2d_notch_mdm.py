@@ -21,8 +21,7 @@ from ibvpy.fets.fets2D.fets2D4q8u import FETS2D4Q8U
 from numpy import array, cos, sin, pi, sqrt, deg2rad, arctan
 from mathkit.mfn import MFnLineArray
 
-
-from rt_nonlocal_averaging import \
+from ibvpy.cntl.displ_avg.rt_nonlocal_averaging import \
     RTNonlocalAvg, QuarticAF
 
 def app():
@@ -41,13 +40,7 @@ def app():
     mdm = MATS2DMicroplaneDamage(E=20.0e3,
                                  nu=0.2,
                                  #epsilon_f = 12.0e-4, #test doubling the e_f
-                    #    tl.eval()
-#    # Put the whole stuff into the simulation-framework to map the
-#    # individual pieces of definition into the user interface.
-#    #
-#    from ibvpy.plugins.ibvpy_app import IBVPyApp
-#    ibvpy_app = IBVPyApp(ibv_resource=ts)
-#    ibvpy_app.main()             stress_state="plane_strain",
+                                 stress_state="plane_strain",
                                 model_version='compliance',
                                 phi_fn=PhiFnStrainSoftening(
                                                               G_f=0.0014,
@@ -57,11 +50,21 @@ def app():
 
     fets_eval = FETS2D4Q(mats_eval=mdm)#, ngp_r = 3, ngp_s = 3)                                               
 
-    n_el_x = 18
+    fe_domain = FEDomain()
+
+    fe_rgrid = FERefinementGrid(name='fe_grid1', fets_eval=fets_eval, domain=fe_domain)
+
+    n_half = 10
+    n_el_x = 2 * n_half + 1
+    n_el_y = n_el_x / 4
     # Discretization
     fe_grid = FEGrid(coord_max=(.6, .15, 0.),
-                      shape=(n_el_x, n_el_x / 4),
-                      fets_eval=fets_eval)
+                      shape=(n_el_x, n_el_y),
+                      fets_eval=fets_eval,
+                      level=fe_rgrid)
+
+    for i in range(0, n_el_y / 2):
+        fe_grid.deactivate((n_half, i))
 
     mf = MFnLineArray(xdata=array([0, 1, 2 ]),
                        ydata=array([0, 3., 3.2 ]))
@@ -70,7 +73,7 @@ def app():
     avg_processor = RTNonlocalAvg(avg_fn=QuarticAF(radius=avg_radius,
                                                        correction=True))
 
-    loading_dof = fe_grid[n_el_x / 2, -1, 0, -1].dofs.flatten()[1]
+    loading_dof = fe_grid[n_half, -1, 0, -1].dofs.flatten()[1]
     print 'loading_dof', loading_dof
     ts = TS(sdomain=fe_grid,
              u_processor=avg_processor,
@@ -78,7 +81,7 @@ def app():
                         # constraint for all left dofs in y-direction:
                         BCSlice(var='u', slice=fe_grid[0, 0, 0, 0], dims=[0, 1], value=0.),
                         BCSlice(var='u', slice=fe_grid[-1, 0, -1, 0], dims=[1], value=0.),
-                        BCSlice(var='u', slice=fe_grid[n_el_x / 2, -1, 0, -1], dims=[1],
+                        BCSlice(var='u', slice=fe_grid[n_half, -1, :, -1], dims=[1],
                                 time_function=mf.get_value,
                                 value= -2.0e-4),
                         ],
@@ -119,20 +122,14 @@ def app():
     tl = TLoop(tstepper=ts,
                 tolerance=5.0e-5,
                 KMAX=200,
-                tline=TLine(min=0.0, step=.1, max=1.0))
-
-    tl.setup()
-    print avg_processor.C_mtx
-
-
-#    tl.eval()
-#    # Put the whole stuff into the simulation-framework to map the
-#    # individual pieces of definition into the user interface.
-#    #
-#    from ibvpy.plugins.ibvpy_app import IBVPyApp
-#    ibvpy_app = IBVPyApp(ibv_resource=ts)
-#    ibvpy_app.main()
-
+                tline=TLine(min=0.0, step=.1, max=0.3))
+    #tl.eval()
+    # Put the whole stuff into the simulation-framework to map the
+    # individual pieces of definition into the user interface.
+    #
+    from ibvpy.plugins.ibvpy_app import IBVPyApp
+    ibvpy_app = IBVPyApp(ibv_resource=ts)
+    ibvpy_app.main()
 
 if __name__ == '__main__':
     app()
