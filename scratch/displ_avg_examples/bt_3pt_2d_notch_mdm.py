@@ -76,7 +76,7 @@ def app():
     loading_dof = fe_grid[n_half, -1, 0, -1].dofs.flatten()[1]
     print 'loading_dof', loading_dof
     ts = TS(sdomain=fe_grid,
-             u_processor=avg_processor,
+#             u_processor=avg_processor,
              bcond_list=[
                         # constraint for all left dofs in y-direction:
                         BCSlice(var='u', slice=fe_grid[0, 0, 0, 0], dims=[0, 1], value=0.),
@@ -123,13 +123,14 @@ def app():
                 tolerance=5.0e-5,
                 KMAX=200,
                 tline=TLine(min=0.0, step=.1, max=0.3))
-    #tl.eval()
+    tl.eval()
     # Put the whole stuff into the simulation-framework to map the
     # individual pieces of definition into the user interface.
     #
     from ibvpy.plugins.ibvpy_app import IBVPyApp
-    ibvpy_app = IBVPyApp(ibv_resource=ts)
+    ibvpy_app = IBVPyApp(ibv_resource=tl)
     ibvpy_app.main()
+
 
 if __name__ == '__main__':
     app()
