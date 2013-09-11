@@ -39,6 +39,7 @@ def app():
 
     mdm = MATS2DMicroplaneDamage(E=30.0e3,
                                  nu=0.2,
+                                 #elastic_debug=True,
                                 model_version='compliance',
                                 phi_fn=PhiFnStrainSoftening(
                                                               G_f=0.124,
@@ -54,7 +55,7 @@ def app():
 
     fe_rgrid = FERefinementGrid(name='fe_grid1', fets_eval=fets_eval, domain=fe_domain)
 
-    n_half = 30
+    n_half = 10
     n_el_x = n_half * 2 + 1
     n_el_y = n_el_x / 10
     # Discretization
@@ -81,7 +82,7 @@ def app():
     print 'redundant_dof' , redundant_dofs
 
     ts = TS(sdomain=fe_grid,
-            u_processor=avg_processor,
+            #u_processor=avg_processor,
              bcond_list=[
                         # constraint for all left dofs in y-direction:
                         BCSlice(var='u', slice=fe_grid[0, 0, 0, 0], dims=[0, 1], value=0.),
