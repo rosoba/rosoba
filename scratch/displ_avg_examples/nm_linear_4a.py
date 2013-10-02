@@ -17,9 +17,8 @@ from ibvpy.mats.mats2D.mats2D_cmdm.mats2D_cmdm import MATS2DMicroplaneDamage, Ph
 from ibvpy.mats.mats2D.mats2D_sdamage.strain_norm2d import Euclidean, Mazars, Rankine
 from ibvpy.mats.mats_proxy import MATSProxy
 from ibvpy.fets.fets2D.fets2D4q import FETS2D4Q
-from ibvpy.fets.fets2D.fets2D4q9u import FETS2D4Q9U
+from ibvpy.fets.fets2D.fets2D4q9u import  FETS2D4Q9U
 from ibvpy.fets.fets2D.fets2D4q8u import FETS2D4Q8U
-from ibvpy.fets.fets2D.fets2D9q import FETS2D9Q
 from numpy import array, cos, sin, pi, sqrt, deg2rad, arctan, reshape
 from mathkit.mfn import MFnLineArray
 
@@ -28,7 +27,7 @@ from rt_nonlocal_averaging import \
 
 def app():
     avg_radius = 30
-    thickness = 50
+    thickness = 50  # mm
 
     md = MATS2DScalarDamage(E=30.0e3,
                             nu=0.2,
@@ -42,14 +41,22 @@ def app():
 
     mdm = MATS2DMicroplaneDamage(E=30.0e3,
                                  nu=0.2,
-                                 model_version='compliance',
-                                 phi_fn=PhiFnStrainSoftening(
+                                 # epsilon_f = 12.0e-4, #test doubling the e_f
+                    #    tl.eval()
+#    # Put the whole stuff into the simulation-framework to map the
+#    # individual pieces of definition into the user interface.
+#    #
+#    from ibvpy.plugins.ibvpy_app import IBVPyApp
+#    ibvpy_app = IBVPyApp(ibv_resource=ts)
+#    ibvpy_app.main()             stress_state="plane_strain",
+                                model_version='compliance',
+                                phi_fn=PhiFnStrainSoftening(
                                                               G_f=0.1,
                                                               f_t=3.0,
                                                               md=0.0,
-                                                              h=25))
+                                                              h=2. * avg_radius))
 
-    fets_eval = FETS2D4Q9U(mats_eval=mdm)  # , ngp_r = 3, ngp_s = 3)
+    fets_eval = FETS2D4Q(mats_eval=mdm)  # , ngp_r = 3, ngp_s = 3)
 
     fe_domain = FEDomain()
 
@@ -79,8 +86,8 @@ def app():
                        ydata=array([0, 0., 1 ]))
 
     # averaging function
-    avg_processor = RTNonlocalAvg(avg_fn=QuarticAF(radius=avg_radius,
-                                                       correction=True))
+#     avg_processor = RTNonlocalAvg(avg_fn=QuarticAF(radius=avg_radius,
+#                                                        correction=True))
 
     bc_slice_up = fe_grid[:, -1, :, -1]
     print 'BC Up', bc_slice_up.elems.flatten()
@@ -88,10 +95,10 @@ def app():
     bc_slice_left = fe_grid[0, n_half + 1:, 0, :]
     print 'BC Left', bc_slice_left.elems.flatten()
 
-    bc_slice_right = fe_grid[-1, 0:n_half, -1, :]
+    bc_slice_right = fe_grid[-1, 1:n_half, -1, :]
     print 'BC Right', bc_slice_right.elems.flatten()
 
-    bc_slice_down = fe_grid[:, 0, (1, 2), 0]
+    bc_slice_down = fe_grid[:, 0, -1, 0]
     print 'BC Down', bc_slice_down.elems.flatten()
 
     bc_loading = fe_grid[0, 0, 0, 0]
@@ -102,17 +109,18 @@ def app():
     print 'loading_dof_p', loading_dof_p
     print 'dofs right', bc_slice_right.dofs.flatten()
     print 'dofs down', bc_slice_down.dofs.flatten()
-    redundant_dofs_left = fe_grid[0:n_dact, n_half, :-1, 1]
-    print 'redundant dofs left' , redundant_dofs_left.dofs.flatten()
-    redundant_dofs_right = fe_grid[n_el - n_dact:n_el, n_half, 1:, 1]
-    print 'redundant dofs right' , redundant_dofs_right.dofs.flatten()
 
 
-    aa_x = np.hstack((loading_dof_ps, np.unique(bc_slice_down.dofs[:, :, 0].flatten()), np.unique(bc_slice_right.dofs[:, :, 0].flatten())))
-    aa_y = np.hstack((loading_dof_p, np.unique(bc_slice_down.dofs[:, :, 1].flatten()), np.unique(bc_slice_right.dofs[:, :, 1].flatten())))
+    print np.unique(bc_slice_right.dofs[:, :, 0].flatten())
+    print np.unique(bc_slice_down.dofs[:, :, 0].flatten())
 
-    print 'aa_x', aa_x
-    print 'aa_y', aa_y
+
+    aa_x = np.hstack((loading_dof_ps, np.unique(bc_slice_right.dofs[:, :, 0].flatten()), np.unique(bc_slice_down.dofs[:, :, 0].flatten())))
+    aa_y = np.hstack((loading_dof_p, np.unique(bc_slice_right.dofs[:, :, 1].flatten()), np.unique(bc_slice_down.dofs[:, :, 1].flatten())))
+
+
+
+
 
     link_right = BCSlice(var='u', value=0., dims=[0, 1],
                                    slice=bc_slice_right,
@@ -127,20 +135,22 @@ def app():
                                    link_coeffs=[1.])
 
     ts = TS(sdomain=fe_grid,
-            u_processor=avg_processor,
+#              u_processor=avg_processor,
              bcond_list=[
                         link_right, link_down,
                         # constraint for all left dofs in y-direction:
                         BCSlice(var='u', slice=bc_slice_up, dims=[0, 1], value=0.),
                         BCSlice(var='u', slice=bc_slice_left, dims=[0, 1], value=0.),
-                        BCSlice(var='u', slice=redundant_dofs_left, dims=[0, 1], value=0.),
-                        BCSlice(var='u', slice=redundant_dofs_right, dims=[0, 1], value=0.),
+
                         BCSlice(var='f', slice=bc_loading, dims=[0],
                                 time_function=Ps_fn.get_value,
                                 value= -100),
                         BCSlice(var='u', slice=bc_loading, dims=[1],
                                 time_function=P_fn.get_value,
                                 value= -0.05),
+
+
+
                         ],
              rtrace_list=[
                             RTraceGraph(name='Ps' ,
@@ -170,6 +180,13 @@ def app():
                             RTraceDomainListField(name='Damage' ,
                                         var='omega_mtx', idx=0, warp=True,
                                         record_on='update'),
+
+    #                         RTraceDomainField(name = 'Stress' ,
+    #                                        var = 'sig', idx = 0,
+    #                                        record_on = 'update'),
+    #                        RTraceDomainField(name = 'N0' ,
+    #                                       var = 'N_mtx', idx = 0,
+    #                                       record_on = 'update')
                         ]
             )
 
@@ -177,8 +194,8 @@ def app():
     #
     tl = TLoop(tstepper=ts,
                 tolerance=5.0e-5,
-                KMAX=200,  # debug=True,
-                tline=TLine(min=0.0, step=.05, max=0.7))
+                KMAX=200,
+                tline=TLine(min=0.0, step=.02, max=0.02))
 
     tl.setup()
 #     print avg_processor.C_mtx

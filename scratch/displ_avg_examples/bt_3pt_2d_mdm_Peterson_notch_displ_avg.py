@@ -25,7 +25,7 @@ from ibvpy.cntl.displ_avg.rt_nonlocal_averaging import \
     RTNonlocalAvg, QuarticAF
 
 def app():
-    avg_radius = 30
+    avg_radius = 100
     thickness = 50.0  # mm
     md = MATS2DScalarDamage(E=30.0e3,
                             nu=0.2,
@@ -60,7 +60,7 @@ def app():
 
     fe_rgrid = FERefinementGrid(name='fe_grid1', fets_eval=fets_eval, domain=fe_domain)
 
-    n_half = 30
+    n_half = 10
     n_el_x = n_half * 2 + 1
     n_el_y = n_el_x / 10
     # Discretization
@@ -132,7 +132,7 @@ def app():
     tl = TLoop(tstepper=ts,
                 tolerance=5.0e-5,
                 KMAX=200,
-                tline=TLine(min=0.0, step=.1, max=1))
+                tline=TLine(min=0.0, step=.1, max=0.1))
 
     tl.setup()
 #     print avg_processor.C_mtx

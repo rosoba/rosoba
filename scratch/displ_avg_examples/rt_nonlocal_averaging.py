@@ -101,7 +101,7 @@ class RTUAvg(RTraceDomain):
             if n_a_elems == 0:
                 'WARNING - Radius too small!'
 
-            # print 'active_elements', active_elems
+#             print 'active_elements', active_elems
 
             # Generate the IP coords for all active elems            
             # element transformation have to be used due distorted meshes
