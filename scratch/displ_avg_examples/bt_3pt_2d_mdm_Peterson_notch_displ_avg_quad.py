@@ -39,6 +39,7 @@ def app():
 
     mdm = MATS2DMicroplaneDamage(E=30.0e3,
                                  nu=0.2,
+                                 # elastic_debug=True,
                                 model_version='compliance',
                                 phi_fn=PhiFnStrainSoftening(
                                                               G_f=0.124,
@@ -46,7 +47,7 @@ def app():
                                                               md=0.0,
                                                               h=12.5))
 
-    #mdm = MATS2DElastic()
+    # mdm = MATS2DElastic()
 
     fets_eval = FETS2D4Q9U(mats_eval=mdm)
 
@@ -81,7 +82,7 @@ def app():
     print 'redundant_dof' , redundant_dofs.dofs.flatten()
 
     ts = TS(sdomain=fe_grid,
-#              u_processor=avg_processor,
+            # u_processor=avg_processor,
              bcond_list=[
                         # constraint for all left dofs in y-direction:
                         BCSlice(var='u', slice=fe_grid[0, 0, 0, 0], dims=[0, 1], value=0.),

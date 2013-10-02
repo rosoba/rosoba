@@ -40,7 +40,7 @@ def app():
                       level=fe_rgrid)
 
     for i in range(0, 1):
-        fe_grid.deactivate((0, 0))
+        fe_grid.deactivate((1, 0))
 
     ts = TS(sdomain=fe_grid,
              bcond_list=[
