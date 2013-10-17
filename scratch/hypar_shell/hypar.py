@@ -95,7 +95,7 @@ class HyparModel(IBVModel):
     z_minus = Float(1.0, input=True)
 
     E_c = Float(28700, auto_set=False, enter_set=True,) # [MPa]
-    E_pur = Float(28700, auto_set=False, enter_set=True,) # [MPa]
+    E_pur = Float(8700, auto_set=False, enter_set=True,) # [MPa]
     nu = Float(0.2, auto_set=False, enter_set=True,) # [-]
 
     mats_c = Instance(MATS3DElastic, input=True)
@@ -146,11 +146,11 @@ class HyparModel(IBVModel):
                    ]
         vtk_cells = [[0, 1, 3, 2, 4, 5, 7, 6]]
 
-#        fets_c = FETS3D8H(mats_eval=MATS3DElastic(E=10),
-#                           geo_r=node_map,
-#                           vtk_r=node_map,
-#                           vtk_cells=vtk_cells,
-#                           )
+        fets_c = FETS3D8H(mats_eval=MATS3DElastic(E=10),
+                           geo_r=node_map,
+                           vtk_r=node_map,
+                           vtk_cells=vtk_cells,
+                           )
 
         fets_c = self.fets_c
         fets_pur = self.fets_pur
@@ -170,13 +170,13 @@ class HyparModel(IBVModel):
                                      geo_transform=geo_hypar_mid,
                                      shape=(self.shape_x, self.shape_y, self.shape_z),
                                      fets_eval=fets_pur)
-#        fe_rgrid_top = FERefinementGrid(domain=fe_domain, fets_eval=fets_c)
-#        fe_grid_top_shell = FEGrid(level=fe_rgrid_top,
-#                                     coord_min=(-1.0, -1.0, 0.0),
-#                                     coord_max=(1.0, 1.0, 1.0),
-#                                     geo_transform=geo_hypar_top,
-#                                     shape=(self.shape_x, self.shape_y, self.shape_z),
-#                                     fets_eval=fets_c)
+        fe_rgrid_top = FERefinementGrid(domain=fe_domain, fets_eval=fets_c)
+        fe_grid_top_shell = FEGrid(level=fe_rgrid_top,
+                                     coord_min=(-1.0, -1.0, 0.0),
+                                     coord_max=(1.0, 1.0, 1.0),
+                                     geo_transform=geo_hypar_top,
+                                     shape=(self.shape_x, self.shape_y, self.shape_z),
+                                     fets_eval=fets_c)
 
         return fe_domain
 
@@ -184,17 +184,19 @@ class HyparModel(IBVModel):
     @cached_property
     def _get_tloop(self):
 
+        print self.fe_domain.n_dofs
+
         subdomains = self.fe_domain.subdomains
 
         fe_grid_low = subdomains[0].fe_subgrids[0]
         fe_grid_mid = subdomains[1].fe_subgrids[0]
-#        fe_grid_top = subdomains[2].fe_subgrids[0]
+        fe_grid_top = subdomains[2].fe_subgrids[0]
 
         low_grid_top_slice = fe_grid_low[:, :, -1, :, :, -1]
         mid_grid_low_slice = fe_grid_mid[:, :, 0, :, :, 0]
 #
-#        mid_grid_top_slice = fe_grid_mid[:, :, -1, :, :, -1]
-#        top_grid_low_slice = fe_grid_top[:, :, 0, :, :, 0]
+        mid_grid_top_slice = fe_grid_mid[:, :, -1, :, :, -1]
+        top_grid_low_slice = fe_grid_top[:, :, 0, :, :, 0]
 
         left_support_slice = fe_grid_low[0, :, 0, 0, :, 0]
         right_support_slice = fe_grid_low[-1, :, 0, -1, :, 0]
@@ -203,10 +205,12 @@ class HyparModel(IBVModel):
                       bcond_list=[
                                   BCSlice(var='u', slice=low_grid_top_slice,
                                        link_slice=mid_grid_low_slice, value=0.0,
-                                       dims=[0, 1, 2], link_doeffs=[1., 1., 1.]),
-#                                  BCSlice(var='u', slice=mid_grid_top_slice,
-#                                          link_slice=top_grid_low_slice,
-#                                          dims=[0, 1, 2], link_doeffs=[1.]),
+                                       dims=[0, 1, 2], link_dims=[0, 1, 2],
+                                       link_coeffs=[1., 1., 1.]),
+                                  BCSlice(var='u', slice=mid_grid_top_slice,
+                                          link_slice=top_grid_low_slice, value=0.0,
+                                          dims=[0, 1, 2], link_dims=[0, 1, 2],
+                                          link_coeffs=[1., 1., 1.]),
                                   BCSlice(var='u', slice=left_support_slice, value=0.0,
                                           dims=[1, 2]),
                                   BCSlice(var='u', slice=right_support_slice, value=0.0,
@@ -214,10 +218,10 @@ class HyparModel(IBVModel):
                                   BCSlice(var='u', slice=fe_grid_low[0, 0, 0, 0, 0, 0], value=0.0,
                                           dims=[0]),
                                   # LC1: dead load [MN/m^3]
-#                                  BCSlice(var='f', value= -0.0224 , dims=[2],
-#                                          integ_domain='global',
-#                                          slice=fe_grid_top[:, :, :, :, :, :]),
-                               BCSlice(var='f', value= -0.0224 , dims=[2],
+                                  BCSlice(var='f', value= -0.0224 , dims=[2],
+                                          integ_domain='global',
+                                          slice=fe_grid_top[:, :, :, :, :, :]),
+                                  BCSlice(var='f', value= -0.0224 , dims=[2],
                                           integ_domain='global',
                                           slice=fe_grid_low[:, :, :, :, :, :]),
                                ],
@@ -245,7 +249,7 @@ class HyparModel(IBVModel):
 
         fe_grid_low = subdomains[0].fe_subgrids[0]
         fe_grid_mid = subdomains[1].fe_subgrids[0]
-        #fe_grid_top = subdomains[2].fe_subgrids[0]
+        fe_grid_top = subdomains[2].fe_subgrids[0]
 
         geo_grid = fe_grid_low.geo_grid
 
@@ -278,16 +282,19 @@ class HyparModel(IBVModel):
 
 if __name__ == '__main__':
 
-    sim_model = HyparModel(n_dofs_xy=5,
+    sim_model = HyparModel(shape_x=10,
+                           shape_y=5,
                            shape_z=1,
-                           length_x=10.0,
-                           length_y=3.0,
+                           z_plus=0.5,
+                           z_minus=0.5,
+                           length_x=8.0,
+                           length_y=2.0,
                            low_thickness=0.06,
                            mid_thickness=0.20,
                            top_thickness=0.06,
                            )
 
-    do = 'edit'
+    do = 'eval'
 
     if do == 'generate_mesh':
         subdomains = sim_model.fe_domain.subdomains
