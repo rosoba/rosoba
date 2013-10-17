@@ -4,69 +4,36 @@ Created on May 22, 2013
 @author: rch
 '''
 
-from traits.api import HasStrictTraits, Float, Property, cached_property
-import math
+import pylab as p
+import numpy as np
 
-class Circle(HasStrictTraits):
+x = np.array([ -0.          , 0.99873719 , 1.99799806 , 2.99768678 , 3.99768073,
+   4.99792819 , 5.99803716, 6.99790143 , 7.99781571 , 8.99767217,
+   9.99752164 , 10.99742151], dtype='f')
+y = np.array([ -0.     , 3.22066481 , 4.95216276  , 5.88851342  , 6.59558722,
+   7.24670826 , 7.84015851  , 8.43182053 , 9.0189859 , 9.60680071,
+  10.19540105 , 10.81907537], dtype='f')
 
-    radius = Float(1.0, auto_set=False, enter_set=True)
-
-    area = Property(Float, depends_on='radius')
-    @cached_property
-    def _get_area(self):
-        return self.radius ** 2 * math.pi
-
-# all_traits_features.py --- Shows primary features of the Traits
-#                            package
-
-from traits.api import Delegate, HasTraits, Instance, \
-                                 Int, Str
-class Parent (HasTraits):
-
-    # INITIALIZATION: last_name' is initialized to '':
-    last_name = Str('')
+p.plot(x, y, label='5x1x2', color='red')
 
 
-class Child (HasTraits):
+x = np.array([ -0.      , 0.99864624  , 1.99792854 , 2.99777729 , 3.99765457,
+   4.99750531, 5.99736327  , 6.99718224  , 7.9970177   , 8.99685606,
+   9.99664747 , 10.99645787], dtype='f')
+y = np.array([ -0.   , 3.22031457 , 4.95933071 , 5.81410902, 6.47958068,
+   7.09493747   , 7.71413274  , 8.32765569 , 8.93130562 , 9.54589608,
+  10.15809262  , 10.78480024], dtype='f')
 
-    age = Int
+p.plot(x, y, label='5x1x4', color='green')
 
-    # VALIDATION: 'father' must be a Parent instance:
-    father = Instance(Parent)
+x = [ -0.   , 0.9985739 , 1.99781178  , 2.997612 , 3.99742466,
+   4.9972292  , 5.99698294  , 6.9967863    , 7.99646473  , 8.99624983,
+   9.99596764 , 10.99567558]
+y = [ -0.    , 3.21928012 , 4.95688334   , 5.8091933, 6.48476822,
+   7.11599435  , 7.73233116 , 8.3412988, 8.94230146 , 9.55246063,
+  10.16858915 , 10.7895056 ]
 
-    # DELEGATION: 'last_name' is delegated to father's 'last_name':
-    last_name = Delegate('father')
+p.plot(x, y, label='5x1x6', color='black')
 
-    # NOTIFICATION: This method is called when 'age' changes:
-    def _age_changed (self, old, new):
-        print 'Age changed from %s to %s ' % (old, new)
-
-# Set up the example:
-joe = Parent()
-joe.last_name = 'Johnson'
-moe = Child()
-moe.father = joe
-
-# DELEGATION in action:
-print "Moe's last name is %s " % moe.last_name
-# Result:
-# Moe's last name is Johnson
-
-# NOTIFICATION in action
-moe.age = 10
-# Result:
-# Age changed from 0 to 10
-
-# VISUALIZATION: Displays a UI for editing moe's attributes
-# (if a supported GUI toolkit is installed)
-moe.configure_traits()
-
-
-#if __name__ == '__main__':
-#    c = Circle(radius=4.0)
-#    print c.area
-#    print c.area
-#    c.radius = 5.0
-#    print c.area
-#
-#    c.configure_traits()
+p.legend()
+p.show()
