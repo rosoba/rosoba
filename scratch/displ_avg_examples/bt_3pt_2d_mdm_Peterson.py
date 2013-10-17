@@ -25,68 +25,75 @@ from rt_nonlocal_averaging import \
     RTNonlocalAvg, QuarticAF
 
 def app():
-    avg_radius = 0.1
+    avg_radius = 0.03
 
-    md = MATS2DScalarDamage(E=20.0e3,
+    md = MATS2DScalarDamage(E=30.0e3,
                             nu=0.2,
                             epsilon_0=1.0e-4,
                             epsilon_f=8.0e-4,
                             # epsilon_f = 12.0e-4, #test doubling the e_f
-                            stress_state="plane_stress",
+                            stress_state="plane_strain",
                             stiffness="secant",
                             # stiffness  = "algorithmic",
                             strain_norm=Rankine())
 
-    mdm = MATS2DMicroplaneDamage(E=20.0e3,
+    mdm = MATS2DMicroplaneDamage(E=30.0e3,
                                  nu=0.2,
                                  # epsilon_f = 12.0e-4, #test doubling the e_f
-                    #    tl.eval()
-#    # Put the whole stuff into the simulation-framework to map the
-#    # individual pieces of definition into the user interface.
-#    #
-#    from ibvpy.plugins.ibvpy_app import IBVPyApp
-#    ibvpy_app = IBVPyApp(ibv_resource=ts)
-#    ibvpy_app.main()             stress_state="plane_strain",
-                                model_version='compliance',
-                                phi_fn=PhiFnStrainSoftening(
-                                                              G_f=0.0014,
-                                                              f_t=2.0,
+                                 stress_state="plane_stress",
+                                 model_version='compliance',
+                                 phi_fn=PhiFnStrainSoftening(
+                                                              G_f=0.00124,
+                                                              f_t=3.3,
                                                               md=0.0,
                                                               h=2. * avg_radius))
-    print 'Microplane normals' , mdm._get__MPN()
-    print 'Microplane weights' , mdm._get__MPW()
 
     fets_eval = FETS2D4Q(mats_eval=mdm)  # , ngp_r = 3, ngp_s = 3)
 
-    n_el_x = 20
+    n_el_x = 50
     # Discretization
-    fe_grid = FEGrid(coord_max=(2, .2, 0.),
-                      shape=(n_el_x, n_el_x / 4),
+    fe_grid = FEGrid(coord_max=(2.0, .2, 0.),
+                      shape=(n_el_x, n_el_x / 10),
                       fets_eval=fets_eval)
 
     mf = MFnLineArray(xdata=array([0, 1, 2 ]),
                        ydata=array([0, 3., 3.2 ]))
 
     # averaging function
-    avg_processor = RTNonlocalAvg(avg_fn=QuarticAF(radius=avg_radius,
-                                                       correction=True))
+#     avg_processor = RTNonlocalAvg(avg_fn=QuarticAF(radius=avg_radius,
+#                                                        correction=True))
 
-    loading_dof = fe_grid[n_el_x / 2, -1, 0, -1].dofs.flatten()[1]
+    loading_slice = fe_grid[n_el_x / 2, -1, :, -1]
+    loading_dof = loading_slice.dofs.flatten()[1]
+    loading_dofs = loading_slice.dofs.flatten()
+    print 'loading_dofs', loading_dofs
+
     print 'loading_dof', loading_dof
+    support_dof_left = fe_grid[0, 0, 0, 0].dofs[0, 0, 1]
+    support_dof_right = fe_grid[-1, 0, -1, 0].dofs[0, 0, 1]
+    print 'support_dof', support_dof_left, support_dof_right
     ts = TS(sdomain=fe_grid,
-             u_processor=avg_processor,
+#              u_processor=avg_processor,
              bcond_list=[
                         # constraint for all left dofs in y-direction:
                         BCSlice(var='u', slice=fe_grid[0, 0, 0, 0], dims=[0, 1], value=0.),
                         BCSlice(var='u', slice=fe_grid[-1, 0, -1, 0], dims=[1], value=0.),
-                        BCSlice(var='u', slice=fe_grid[n_el_x / 2, -1, 0, -1], dims=[1],
+                        BCSlice(var='u', slice=loading_slice, dims=[1],
                                 time_function=mf.get_value,
-                                value= -2.0e-4),
+                                value= -5.0e-4),
                         ],
              rtrace_list=[
-                            RTraceGraph(name='Fi,right over u_right (iteration)' ,
-                                      var_y='F_int', idx_y=loading_dof,
+                            RTraceGraph(name='F(loading point) - w' ,
+                                        var_y='F_int', idx_y_arr=loading_dofs,
+                                        transform_y='-y',
+                                        var_x='U_k', idx_x=loading_dof,
+                                        transform_x='-x',
+                                        record_on='update'),
+                            RTraceGraph(name='F(support point) - w' ,
+                                      var_y='F_int', idx_y_arr=[support_dof_left, support_dof_right],
+                                      transform_y='y',
                                       var_x='U_k', idx_x=loading_dof,
+                                      transform_x='-x',
                                       record_on='update'),
                             RTraceDomainListField(name='Deformation' ,
                                            var='eps_app', idx=0,
@@ -123,7 +130,7 @@ def app():
                 tline=TLine(min=0.0, step=.1, max=1.0))
 
     tl.setup()
-    print avg_processor.C_mtx
+#     print avg_processor.C_mtx
 
 
     tl.eval()

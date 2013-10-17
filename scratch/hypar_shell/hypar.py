@@ -287,7 +287,7 @@ if __name__ == '__main__':
                            top_thickness=0.06,
                            )
 
-    do = 'edit'
+    do = 'eval'
 
     if do == 'generate_mesh':
         subdomains = sim_model.fe_domain.subdomains

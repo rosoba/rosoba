@@ -25,9 +25,9 @@ from rt_nonlocal_averaging import \
     RTNonlocalAvg, QuarticAF
 
 def app():
-    avg_radius = 0.1
-
-    md = MATS2DScalarDamage(E=20.0e3,
+    avg_radius = 30
+    thickness = 50.0  # mm
+    md = MATS2DScalarDamage(E=30.0e3,
                             nu=0.2,
                             epsilon_0=1.0e-4,
                             epsilon_f=8.0e-4,
@@ -37,7 +37,7 @@ def app():
                             # stiffness  = "algorithmic",
                             strain_norm=Rankine())
 
-    mdm = MATS2DMicroplaneDamage(E=20.0e3,
+    mdm = MATS2DMicroplaneDamage(E=30.0e3,
                                  nu=0.2,
                                  # epsilon_f = 12.0e-4, #test doubling the e_f
                     #    tl.eval()
@@ -49,62 +49,74 @@ def app():
 #    ibvpy_app.main()             stress_state="plane_strain",
                                 model_version='compliance',
                                 phi_fn=PhiFnStrainSoftening(
-                                                              G_f=0.0014,
-                                                              f_t=2.0,
+                                                              G_f=0.124,
+                                                              f_t=3.3,
                                                               md=0.0,
-                                                              h=2. * avg_radius))
-    print 'Microplane normals' , mdm._get__MPN()
-    print 'Microplane weights' , mdm._get__MPW()
+                                                              h=12.5))
 
     fets_eval = FETS2D4Q(mats_eval=mdm)  # , ngp_r = 3, ngp_s = 3)
 
-    n_el_x = 20
-    # Discretization
-    fe_grid = FEGrid(coord_max=(2, .2, 0.),
-                      shape=(n_el_x, n_el_x / 4),
-                      fets_eval=fets_eval)
+    fe_domain = FEDomain()
 
-    mf = MFnLineArray(xdata=array([0, 1, 2 ]),
-                       ydata=array([0, 3., 3.2 ]))
+    fe_rgrid = FERefinementGrid(name='fe_grid1', fets_eval=fets_eval, domain=fe_domain)
+
+    n_half = 30
+    n_el_x = n_half * 2 + 1
+    n_el_y = n_el_x / 10
+    # Discretization
+    fe_grid = FEGrid(coord_max=(2000.0, 200.0, 0.),
+                      shape=(n_el_x, n_el_y),
+                      fets_eval=fets_eval,
+                      level=fe_rgrid)
+
+    for i in range(0, n_el_y / 2):
+        fe_grid.deactivate((n_half, i))
+
+
+
+    mf = MFnLineArray(xdata=array([0, 1]),
+                       ydata=array([0, 1]))
 
     # averaging function
-    avg_processor = RTNonlocalAvg(avg_fn=QuarticAF(radius=avg_radius,
-                                                       correction=True))
+#     avg_processor = RTNonlocalAvg(avg_fn=QuarticAF(radius=avg_radius,
+#                                                        correction=True))
 
     loading_dof = fe_grid[n_el_x / 2, -1, 0, -1].dofs.flatten()[1]
+    loading_dofs = fe_grid[n_el_x / 2, -1, (0, -1), -1].dofs.flatten()
     print 'loading_dof', loading_dof
     ts = TS(sdomain=fe_grid,
-             u_processor=avg_processor,
+#              u_processor=avg_processor,
              bcond_list=[
                         # constraint for all left dofs in y-direction:
                         BCSlice(var='u', slice=fe_grid[0, 0, 0, 0], dims=[0, 1], value=0.),
                         BCSlice(var='u', slice=fe_grid[-1, 0, -1, 0], dims=[1], value=0.),
-                        BCSlice(var='u', slice=fe_grid[n_el_x / 2, -1, 0, -1], dims=[1],
+                        BCSlice(var='u', slice=fe_grid[n_el_x / 2, -1, (0, -1), -1], dims=[1],
                                 time_function=mf.get_value,
-                                value= -2.0e-4),
+                                value= -0.5),
+
                         ],
-             rtrace_list=[
-                            RTraceGraph(name='Fi,right over u_right (iteration)' ,
-                                      var_y='F_int', idx_y=loading_dof,
+             rtrace_list=[RTraceGraph(name='Fi,right over u_right (iteration)' ,
+                                      var_y='F_int', idx_y_arr=loading_dofs,
                                       var_x='U_k', idx_x=loading_dof,
+                                      transform_x='-x', transform_y='-y*%g' % thickness,
                                       record_on='update'),
-                            RTraceDomainListField(name='Deformation' ,
-                                           var='eps_app', idx=0,
-                                           record_on='update'),
-                            RTraceDomainListField(name='Deformation' ,
-                                           var='sig_app', idx=0,
-                                           record_on='update'),
-                            RTraceDomainListField(name='Displacement' ,
-                                           var='u', idx=1,
-                                           record_on='update',
-                                           warp=True),
-                            RTraceDomainListField(name='fracture_energy' ,
-                                           var='fracture_energy', idx=0,
-                                           record_on='update',
-                                           warp=True),
-                            RTraceDomainListField(name='Damage' ,
-                                        var='omega_mtx', idx=0, warp=True,
-                                        record_on='update'),
+                          RTraceDomainListField(name='Deformation' ,
+                                      var='eps_app', idx=0,
+                                      record_on='update'),
+                          RTraceDomainListField(name='Deformation' ,
+                                      var='sig_app', idx=0,
+                                      record_on='update'),
+                          RTraceDomainListField(name='Displacement' ,
+                                      var='u', idx=1,
+                                      record_on='update',
+                                      warp=True),
+                          RTraceDomainListField(name='fracture_energy' ,
+                                      var='fracture_energy', idx=0,
+                                      record_on='update',
+                                      warp=True),
+                          RTraceDomainListField(name='Damage' ,
+                                      var='omega_mtx', idx=0, warp=True,
+                                      record_on='update'),
 
     #                         RTraceDomainField(name = 'Stress' ,
     #                                        var = 'sig', idx = 0,
@@ -120,10 +132,10 @@ def app():
     tl = TLoop(tstepper=ts,
                 tolerance=5.0e-5,
                 KMAX=200,
-                tline=TLine(min=0.0, step=.1, max=1.0))
+                tline=TLine(min=0.0, step=.1, max=0.2))
 
     tl.setup()
-    print avg_processor.C_mtx
+#     print avg_processor.C_mtx
 
 
     tl.eval()
