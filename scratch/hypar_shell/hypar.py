@@ -118,7 +118,6 @@ class HyparModel(IBVModel):
     @cached_property
     def _get_fe_domain(self):
 
-        print 'fe_domain'
         low_base = 0.0
         mid_base = low_base + self.low_thickness
         top_base = mid_base + self.mid_thickness
