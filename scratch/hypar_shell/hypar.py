@@ -85,18 +85,18 @@ class HyparModel(IBVModel):
     shape_z = Int(1, auto_set=False, enter_set=True, input=True)
 
     # dimensions of the shell structure
-    length_x = Float(10.0, auto_set=False, enter_set=True, input=True) # [m]
-    length_y = Float(2.0, auto_set=False, enter_set=True, input=True) # [m] 
-    low_thickness = Float(0.06, auto_set=False, enter_set=True, input=True) #, ps_levels=(1.0, 2.0, 4)) # [m]
-    mid_thickness = Float(0.38, auto_set=False, enter_set=True, input=True) #, ps_levels=(1.0, 2.0, 4)) # [m]
-    top_thickness = Float(0.06, auto_set=False, enter_set=True, input=True) #, ps_levels=(1.0, 2.0, 4)) # [m]
+    length_x = Float(10.0, auto_set=False, enter_set=True, input=True)  # [m]
+    length_y = Float(2.0, auto_set=False, enter_set=True, input=True)  # [m]
+    low_thickness = Float(0.06, auto_set=False, enter_set=True, input=True)  # , ps_levels=(1.0, 2.0, 4)) # [m]
+    mid_thickness = Float(0.38, auto_set=False, enter_set=True, input=True)  # , ps_levels=(1.0, 2.0, 4)) # [m]
+    top_thickness = Float(0.06, auto_set=False, enter_set=True, input=True)  # , ps_levels=(1.0, 2.0, 4)) # [m]
 
     z_plus = Float(1.0, input=True)
     z_minus = Float(1.0, input=True)
 
-    E_c = Float(28700, auto_set=False, enter_set=True,) # [MPa]
-    E_pur = Float(8700, auto_set=False, enter_set=True,) # [MPa]
-    nu = Float(0.2, auto_set=False, enter_set=True,) # [-]
+    E_c = Float(28700, auto_set=False, enter_set=True,)  # [MPa]
+    E_pur = Float(8700, auto_set=False, enter_set=True,)  # [MPa]
+    nu = Float(0.2, auto_set=False, enter_set=True,)  # [-]
 
     mats_c = Instance(MATS3DElastic, input=True)
     def _mats_c_default(self):
@@ -245,20 +245,24 @@ class HyparModel(IBVModel):
     '''Generate input file for abaqus computation
     '''
     def _generate_abaqus_input_fired(self):
+        self._generate_abaqus_input()
+
+    def _generate_abaqus_input(self):
         subdomains = self.fe_domain.subdomains
 
         fe_grid_low = subdomains[0].fe_subgrids[0]
         fe_grid_mid = subdomains[1].fe_subgrids[0]
         fe_grid_top = subdomains[2].fe_subgrids[0]
 
-        geo_grid = fe_grid_low.geo_grid
-
-        fn_nd = path.join(sim_model.dir, 'nodes.dat')
-        fn_el = path.join(sim_model.dir, 'elems.dat')
-
-        print 'saving data in %s', sim_model.dir
-        np.savetxt(fn_nd, geo_grid.cell_grid.point_X_arr, '%10.5f')
-        np.savetxt(fn_el, geo_grid.cell_node_map + 1, '%d')
+        for idx, fe_grid in enumerate([fe_grid_low, fe_grid_mid, fe_grid_top]):
+            geo_grid = fe_grid.geo_grid
+            elem_node_map = geo_grid.cell_node_map + 1
+            enum_arr = np.arange(len(elem_node_map)) + 1
+            fn_nd = path.join(sim_model.dir, 'nodes_%d.dat' % idx)
+            fn_el = path.join(sim_model.dir, 'elems_%d.dat' % idx)
+            print 'saving data in %s' % sim_model.dir
+            np.savetxt(fn_nd, geo_grid.cell_grid.point_X_arr, '%10.5f', delimiter=',')
+            np.savetxt(fn_el, np.hstack([enum_arr[:, np.newaxis], elem_node_map]), '%d', delimiter=',')
 
     traits_view = View(Item('E_c'),
                        Item('E_pur'),
@@ -294,27 +298,10 @@ if __name__ == '__main__':
                            top_thickness=0.06,
                            )
 
-    do = 'eval'
+    do = 'generate'
 
-    if do == 'generate_mesh':
-        subdomains = sim_model.fe_domain.subdomains
-
-        fe_grid_low = subdomains[0].fe_subgrids[0]
-        fe_grid_mid = subdomains[1].fe_subgrids[0]
-        #fe_grid_top = subdomains[2].fe_subgrids[0]
-
-        geo_grid = fe_grid_low.geo_grid
-
-        fn_nd = path.join(sim_model.dir, 'nodes.dat')
-        fn_el = path.join(sim_model.dir, 'elems.dat')
-
-        print 'saving data in %s', sim_model.dir
-        np.savetxt(fn_nd, geo_grid.cell_grid.point_X_arr, '%10.5f')
-        np.savetxt(fn_el, geo_grid.cell_node_map + 1, '%d')
-
-        from ibvpy.plugins.ibvpy_app import IBVPyApp
-        app = IBVPyApp(ibv_resource=sim_model)
-        app.main()
+    if do == 'generate':
+        sim_model._generate_abaqus_input()
 
     elif do == 'edit':
         sim_model.configure_traits()
