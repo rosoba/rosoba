@@ -15,7 +15,7 @@
 
 from etsproxy.traits.api import \
     HasTraits, HasStrictTraits, Float, Property, cached_property, Instance, \
-    Int, Button
+    Int, Button, Enum
 
 from etsproxy.traits.ui.api import \
     View, Item, Group
@@ -106,13 +106,31 @@ class HyparModel(IBVModel):
     def _mats_pur_default(self):
         return MATS3DElastic(E=self.E_pur, nu=self.nu)
 
-    fets_c = Instance(FETSEval, transient=True, input=True)
-    def _fets_c_default(self):
-        return FETS3D8H(mats_eval=self.mats_c)
+    fets_c = Property(Instance(FETSEval), depends_on='+input')
+    @cached_property
+    def _get_fets_c(self):
+        return FETS3D8H(mats_eval=self.mats_c, **self.elem_options)
 
-    fets_pur = Instance(FETSEval, transient=True, input=True)
-    def _fets_pur_default(self):
-        return FETS3D8H(mats_eval=self.mats_pur)
+    fets_pur = Property(Instance(FETSEval), depends_on='+input')
+    @cached_property
+    def _get_fets_pur(self):
+        return FETS3D8H(mats_eval=self.mats_pur, **self.elem_options)
+
+    mode = Enum('ibvpy', 'abaqus', input=True)
+
+    elem_options = Property(depends_on='+input')
+    def _get_elem_options(self):
+        kw = {}
+        if self.mode == 'abaqus':
+            node_map = [[ -1., -1., -1.], [  1., -1., -1.],
+                        [  1., 1., -1.], [ -1., 1., -1.],
+                        [ -1., -1., 1.], [  1., -1., 1.],
+                        [  1., 1., 1.], [ -1., 1., 1.],
+                        ]
+            kw = dict(geo_r=node_map,
+                      vtk_r=node_map,
+                      vtk_cells=[[0, 1, 3, 2, 4, 5, 7, 6]])
+        return kw
 
     fe_domain = Property(Instance(FEDomain), depends_on='+input')
     @cached_property
@@ -135,22 +153,6 @@ class HyparModel(IBVModel):
                               lz=self.top_thickness, z_base=top_base,
                               z_minus=z_minus, z_plus=z_plus)
 
-        node_map = [[ -1., -1., -1.],
-                   [  1., -1., -1.],
-                   [  1., 1., -1.],
-                   [ -1., 1., -1.],
-                   [ -1., -1., 1.],
-                   [  1., -1., 1.],
-                   [  1., 1., 1.],
-                   [ -1., 1., 1.],
-                   ]
-        vtk_cells = [[0, 1, 3, 2, 4, 5, 7, 6]]
-
-        fets_c = FETS3D8H(mats_eval=MATS3DElastic(E=10),
-                           geo_r=node_map,
-                           vtk_r=node_map,
-                           vtk_cells=vtk_cells,
-                           )
 
         fets_c = self.fets_c
         fets_pur = self.fets_pur
@@ -287,7 +289,7 @@ class HyparModel(IBVModel):
 if __name__ == '__main__':
 
     sim_model = HyparModel(shape_x=10,
-                           shape_y=5,
+                           shape_y=6,
                            shape_z=1,
                            z_plus=0.5,
                            z_minus=0.5,
@@ -296,6 +298,7 @@ if __name__ == '__main__':
                            low_thickness=0.06,
                            mid_thickness=0.20,
                            top_thickness=0.06,
+                           mode='abaqus'
                            )
 
     do = 'generate'
