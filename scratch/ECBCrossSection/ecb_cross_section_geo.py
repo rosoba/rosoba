@@ -52,8 +52,6 @@ class ECBCrossSectionGeo(HasStrictTraits):
     '''Base class for cross section types.
     '''
 
-    cs_state = WeakRef
-
     #===========================================================================
     # Plotting of the cross section
     #===========================================================================
@@ -75,7 +73,7 @@ class ECBCrossSectionGeo(HasStrictTraits):
         self.plot_geometry(ax)
 
         self.data_changed = True
-
+        
     def plot_geometry(self, ax):
         '''Plot geometry'''
 
@@ -84,9 +82,17 @@ class ECBGeoRL(ECBCrossSectionGeo):
     '''
 
     n_layers = Int(10, auto_set=False, enter_set=True, geo_input=True)
+    '''Number of textile reinforcement layers
+    '''
+    
     height = Float(0.3, auto_set=False, enter_set=True, geo_input=True)
-    width = Float(0.2, auto_set=False, enter_set=True, geo_input=True)
+    '''Height of cross section
+    '''
 
+    width = Float(0.2, auto_set=False, enter_set=True, geo_input=True)
+    '''Width of cross section
+    '''
+    
     s_tex_z = Property(depends_on='+geo_input')
     '''property: spacing between the layers [m]
     '''
@@ -95,7 +101,7 @@ class ECBGeoRL(ECBCrossSectionGeo):
         return self.height / (self.n_layers + 1)
 
     z_ti_arr = Property(depends_on='+geo_input')
-    '''property: distance from the top of each reinforcement layer [m]:
+    '''property: distance of each reinforcement layer from the top [m]:
     '''
     @cached_property
     def _get_z_ti_arr(self):
@@ -109,18 +115,15 @@ class ECBGeoRL(ECBCrossSectionGeo):
     def _get_zz_ti_arr(self):
         return self.height - self.z_ti_arr
 
-    def _get_eps_ti_arr(self):
-        return self.cs_state.eps_lo * self.zz_ti_arr
-
     def plot_geometry(self, ax):
         '''Plot geometry'''
-        dx, dy = -self.width / 2, -self.height / 2
+        dx, dz = -self.width / 2, -self.height / 2
         xdata = np.array([0, self.width, self.width, 0, 0], dtype=float)
-        ydata = np.array([0, 0, self.height, self.height, 0], dtype=float)
+        zdata = np.array([0, 0, self.height, self.height, 0], dtype=float)
 
-        ax.plot(xdata + dx, ydata + dy, color='blue')
-        ax.hlines(self.zz_ti_arr + dy, [dx], [dx + self.width], lw=2, color='red')
-        ax.axis([dx - 0.1 * self.width, dx + 1.1 * self.width, dy - 0.1 * self.height, dy + 1.1 * self.height])
+        ax.plot(xdata + dx, zdata + dz, color='blue')
+        ax.hlines(self.zz_ti_arr + dz, [dx], [dx + self.width], lw=2, color='red')
+        ax.axis([dx - 0.1 * self.width, dx + 1.1 * self.width, dz - 0.1 * self.height, dz + 1.1 * self.height])
 
     view = View(HSplit(Group(
                 HGroup(
@@ -151,6 +154,7 @@ class ECBRBar(HasStrictTraits):
     '''Class defining the position and cross sectional properties
     of a bar reinforcement.
     '''
+    
     x = Float(0.0, auto_set=False, enter_set=True, geo_input=True)
     z = Float(0.0, auto_set=False, enter_set=True, geo_input=True)
     A = Float(0.0, auto_set=False, enter_set=True, geo_input=True)
@@ -172,36 +176,49 @@ class ECBRBar(HasStrictTraits):
 class ECBGeoRB(ECBCrossSectionGeo):
     '''Rectangular cross section with arbitrarily spread bar reinforcement.
     '''
-    #total height of crosssection
-    #    
+
     height = Float(0.3, auto_set=False, enter_set=True, geo_input=True)
+    '''total height of crosssection
+    '''
 
-    #total width of crosssection
-    #
     width = Float(0.2, auto_set=False, enter_set=True, geo_input=True)
+    '''total width of crosssection
+    '''
 
-    bar_coords = List(ECBRBar, [])
+    bar_coords = List([[0.05, 0.05], [0.15, 0.05], [0.05, 0.25], [0.15, 0.25]])
+    '''list containing coordinates of individual reinforcement bars
+    '''
+
+    bar_areas = List([0.0004, 0.0004, 0.0004, 0.0004])
+    '''list containing areas of individual reinforcement bars
+    '''
+    
+    bar_lst = List(ECBRBar, [])
     '''List of reinforcement bars
     '''
 
-    bar_coord_arr = Property
-    def _get_bar_coord_arr(self):
-        return np.array(self.bar_lst, dtype='f')
-
-    #number of reinforcement bars
-    #
-    n_bars = Int(8, auto_set=False, enter_set=True, geo_input=True)
-
-    #diameter of reinforcement bar
-    #
-    diameter_bar = Float(0.01, auto_set=False, enter_set=True, geo_input=True)
-
-    A_bar = Property(depends_on='+geo_input')
-    '''property: cross section area of one reinforcement bar [m**2]
+    gravity_centre = Property(depends_on='geo_input')
+    '''z distance of gravity centre from upper rim
     '''
-    @cached_property
-    def _get_A_bar(self):
-        return (self.diameter_bar ** 2) / 4
+    def _get_gravity_centre(self):
+        return self.height / 2
+
+    def get_width(self, z):
+        width_arr = np.empty(z.shape)
+        width_arr[:] = self.width
+        return width_arr
+    
+    bar_area_arr = Property(depends_on='+geo_input')
+    '''property: area of individual reinforcement bars [m**2]
+    '''
+    def _get_bar_area_arr(self):
+        return np.array(self.bar_areas, dtype='f')
+    
+    bar_coord_arr = Property(depends_on='+geo_input')
+    '''property: coordinates of individual reinforcement bars with respect to the left lower corner of the cross section [m]
+    '''
+    def _get_bar_coord_arr(self):
+        return np.array(self.bar_coords, dtype='f')
 
     x_bar_arr = Property(depends_on='+geo_input')
     '''property: horizontal distance of individual reinforcement bars from left rim of cross section [m]
@@ -213,27 +230,23 @@ class ECBGeoRB(ECBCrossSectionGeo):
     '''property: vertical distance of individual reinforcement bars from lower rim of cross section [m]
     '''
     def _get_z_bar_arr(self):
-        return np.random.rand(self.n_bars) * self.height
+        return self.bar_coord_arr[:, 1]
 
     def plot_geometry(self, ax):
         '''Plot geometry'''
-        '''Plot geometry'''
-        dx, dy = -self.width / 2, -self.height / 2
+        dx, dz = -self.width / 2, -self.height / 2
         xdata = np.array([0, self.width, self.width, 0, 0], dtype=float)
-        ydata = np.array([0, 0, self.height, self.height, 0], dtype=float)
+        zdata = np.array([0, 0, self.height, self.height, 0], dtype=float)
+        ax.plot(xdata + dx, zdata + dz, color='blue')
+        ax.axis([dx - 0.1 * self.width, dx + 1.1 * self.width, dz - 0.1 * self.height, dz + 1.1 * self.height])
 
-        ax.plot(xdata + dx, ydata + dy, color='blue')
-        ax.axis([dx - 0.1 * self.width, dx + 1.1 * self.width, dy - 0.1 * self.height, dy + 1.1 * self.height])
-
-        ax.plot(self.x_bar_arr + dx, self.y_bar_arr + dy, 'ro')
+        ax.plot(self.x_bar_arr + dx, self.z_bar_arr + dz, 'ro')
 
     view = View(HSplit(Group(
                 HGroup(
                 Group(Item('width', springy=True),
                       Item('height'),
-                      Item('@bar_lst', editor=bar_lst_editor),
-                      Item('n_bars'),
-                      Item('diameter_bar'),
+#                      Item('@bar_lst', editor=bar_lst_editor),
                       label='Geometry',
                       springy=True
                       ),
@@ -258,83 +271,106 @@ class ECBGeoRI(ECBCrossSectionGeo):
     '''Rectangular cross section with arbitrarily spread bar reinforcement.
     '''
 
-    #total height of crosssection
-    #
     height = Float(0.6, auto_set=False, enter_set=True, geo_input=True)
-
-    #height of upper flange
-    #
-    height_up = Float(0.1, auto_set=False, enter_set=True, geo_input=True)
-
-    #height of lower flange
-    #
-    height_lo = Float(0.1, auto_set=False, enter_set=True, geo_input=True)
-
-    #total width of crosssection
-    #
-    width = Float(0.6, auto_set=False, enter_set=True, geo_input=True)
-
-    #width of stalk
-    #
-    width_st = Float(0.2, auto_set=False, enter_set=True, geo_input=True)
-
-    #number of reinforcement bars
-    #
-    n_bars = Int(8, auto_set=False, enter_set=True, geo_input=True)
-
-    #vertical distance of reinforcement bars from lower rim
-    #
-    z_bars = Float(0.05, auto_set=False, enter_set=True, geo_input=True)
-
-    #diameter of reinforcement bar
-    #
-    diameter_bar = Float(0.01, auto_set=False, enter_set=True, geo_input=True)
-
-    A_bar = Property(depends_on='+geo_input')
-    '''property: cross section area of one reinforcement bar [m**2]
+    '''total height of crosssection
     '''
-    @cached_property
-    def _get_A_bar(self):
-        return (self.diameter_bar ** 2) / 4
+
+    height_up = Float(0.1, auto_set=False, enter_set=True, geo_input=True)
+    '''height of upper flange
+    '''
+
+    height_lo = Float(0.1, auto_set=False, enter_set=True, geo_input=True)
+    '''height of lower flange
+    '''
+
+    width_up = Float(0.4, auto_set=False, enter_set=True, geo_input=True)
+    '''width of upper flange
+    '''
+
+    width_lo = Float(0.6, auto_set=False, enter_set=True, geo_input=True)
+    '''width of lower flange
+    '''
+
+    width_st = Float(0.2, auto_set=False, enter_set=True, geo_input=True)
+    '''width of stalk
+    '''
+    
+    bar_coords = List([[0.2, 0.05], [0.4, 0.05], [0.2, 0.55], [0.4, 0.55]])
+    '''list containing coordinates of individual reinforcement bars
+    '''
+
+    bar_areas = List([0.0004, 0.0004, 0.0004, 0.0004])
+    '''list containing areas of individual reinforcement bars
+    '''
+
+    gravity_centre = Property(depends_on='geo_input')
+    '''z distance of gravity centre from upper rim
+    '''
+    def _get_gravity_centre(self):
+        A_up, z_up = self.width_up * self.height_up, self.height_up / 2
+        A_lo, z_lo = self.width_lo * self.height_lo, self.height - self.height_lo / 2
+        A_st, z_st = self.width_st * (self.height - self.height_up - self.height_lo), (self.height + self.height_up - self.height_lo) / 2
+        return (A_up*z_up + A_lo*z_lo + A_st*z_st) / (A_up + A_lo + A_st)
+    
+    def get_width(self, z):
+        '''returns width of cross section for different vertical coordinates
+        '''
+        width_arr = self.width_up + (np.sign(z-self.height_up)+1)/2 * (self.width_st - self.width_up) + \
+        (np.sign(z-self.height + self.height_lo)+1)/2 * (self.width_lo - self.width_st)
+        return width_arr
+        
+    bar_area_arr = Property(depends_on='+geo_input')
+    '''property: area of individual reinforcement bars [m**2]
+    '''
+    def _get_bar_area_arr(self):
+        return np.array(self.bar_areas, dtype='f')
+
+    bar_coord_arr = Property(depends_on='+geo_input')
+    '''property: coordinates of individual reinforcement bars with respect to the left lower corner of the cross section [m]
+    '''
+    def _get_bar_coord_arr(self):
+        return np.array(self.bar_coords, dtype='f')
 
     x_bar_arr = Property(depends_on='+geo_input')
     '''property: horizontal distance of individual reinforcement bars from left rim of cross section [m]
     '''
     def _get_x_bar_arr(self):
-        return np.array([ (i + 1) * self.width / (self.n_bars + 1)
-                         for i in range(self.n_bars) ],
-                      dtype=float)
+        return self.bar_coord_arr[:, 0]
+
+    z_bar_arr = Property(depends_on='+geo_input')
+    '''property: vertical distance of individual reinforcement bars from lower rim of cross section [m]
+    '''
+    def _get_z_bar_arr(self):
+        return self.bar_coord_arr[:, 1]
 
     def plot_geometry(self, ax):
         '''Plot geometry'''
-        dx, dy = -self.width / 2, -self.height / 2
+        w_max = max(self.width_lo, self.width_up)
+       
+        dx, dz = -w_max / 2, -self.height / 2
 
-        xdata = np.array([0, self.width, self.width, (self.width + self.width_st) / 2,
-                          (self.width + self.width_st) / 2, self.width, self.width, 0, 0,
-                          (self.width - self.width_st) / 2, (self.width - self.width_st) / 2,
-                          0, 0], dtype=float)
-        ydata = np.array([0, 0, self.height_lo, self.height_lo, self.height - self.height_up,
+        xdata = np.array([- self.width_lo / 2, self.width_lo / 2, self.width_lo / 2, self.width_st / 2,
+                          self.width_st / 2, self.width_up / 2, self.width_up / 2, - self.width_up / 2,
+                          - self.width_up / 2, - self.width_st / 2, - self.width_st / 2,
+                          - self.width_lo / 2, - self.width_lo / 2], dtype=float) + w_max / 2
+                          
+        zdata = np.array([0, 0, self.height_lo, self.height_lo, self.height - self.height_up,
                           self.height - self.height_up, self.height, self.height, self.height - self.height_up,
                           self.height - self.height_up, self.height_lo, self.height_lo, 0], dtype=float)
 
-        ax.plot(xdata + dx, ydata + dy, color='blue')
+        ax.plot(xdata + dx, zdata + dz, color='blue')
 
-        #array of z coordinates of bars
-        z_bar_arr = np.empty(self.n_bars); z_bar_arr.fill(self.z_bars)
-
-        ax.plot(self.x_bar_arr + dx, z_bar_arr + dy, 'ro')
-        ax.axis([dx - 0.1 * self.width, dx + 1.1 * self.width, dy - 0.1 * self.height, dy + 1.1 * self.height])
+        ax.plot(self.x_bar_arr + dx, self.z_bar_arr + dz, 'ro')
+        ax.axis([dx - 0.1 * w_max, dx + 1.1 * w_max, dz - 0.1 * self.height, dz + 1.1 * self.height])
 
     view = View(HSplit(Group(
                 HGroup(
-                Group(Item('width', springy=True),
+                Group(Item('width_up', springy=True),
+                      Item('width_lo'),
                       Item('width_st'),
                       Item('height'),
                       Item('height_lo'),
                       Item('height_up'),
-                      Item('n_bars'),
-                      Item('z_bars'),
-                      Item('diameter_bar'),
                       label='Geometry',
                       springy=True
                       ),
@@ -359,37 +395,71 @@ class ECBGeoCB(ECBCrossSectionGeo):
     '''Circular cross section with bar reinforcement.
     '''
 
-    #radius of cross section
-    #
     radius = Float(0.3, auto_set=False, enter_set=True, geo_input=True)
-
-    #number of reinforcement bars
-    #
-    n_bars = Int(10, auto_set=False, enter_set=True, geo_input=True)
-
-    #distance of reinforcement bars from outer rim
-    #
-    d_bars = Float(0.2, auto_set=False, enter_set=True, geo_input=True)
-
-    #diameter of reinforcement bar
-    #
-    diameter_bar = Float(0.01, auto_set=False, enter_set=True, geo_input=True)
-
-    A_bar = Property(depends_on='+geo_input')
-    '''property: cross section area of one reinforcement bar [m**2]
+    '''radius of cross section
     '''
-    @cached_property
-    def _get_A_bar(self):
-        return (self.diameter_bar ** 2) / 4
+
+    n_bars = Int(10, auto_set=False, enter_set=True, geo_input=True)
+    '''number of reinforcement bars
+    '''
+
+    d_bars = Float(0.2, auto_set=False, enter_set=True, geo_input=True)
+    '''distance of reinforcement bars from outer rim
+    '''
+
+    A_bar = Float(0.0004, auto_set=False, enter_set=True, geo_input=True)
+    '''diameter of reinforcement bar
+    '''
+    
+    height = Property(depends_on='radius')
+    '''Height of cross section
+    '''
+    def _get_height(self):
+        return 2 * self.radius
+
+    gravity_centre = Property(depends_on='geo_input')
+    '''z distance of gravity centre from upper rim
+    '''
+    def _get_gravity_centre(self):
+        return self.radius
+
+    def get_width(self, z):
+        r_dist_arr = z - self.radius
+        '''distance of the point from center
+        '''
+        width_arr = 2 * np.sqrt(self.radius ** 2 - r_dist_arr ** 2)
+        return width_arr
+        
+    fi_bar_arr = Property(depends_on='+geo_input')
+    '''property: array containing degrees for computation of bar coordinates
+    '''
+    def _get_fi_bar_arr(self):
+        return np.arange(0, 2 * np.pi, 2 * np.pi / self.n_bars, dtype=float)
+    
+    bar_area_arr = Property(depends_on='+geo_input')
+    '''property: area of individual reinforcement bars [m**2]
+    '''
+    def _get_bar_area_arr(self):
+        return np.ones(self.n_bars) * self.A_bar
+
+    x_bar_arr = Property(depends_on='+geo_input')
+    '''property: horizontal distance of individual reinforcement bars from left rim of cross section [m]
+    '''
+    def _get_x_bar_arr(self):
+        return np.cos(self.fi_bar_arr) * (self.radius - self.d_bars) + self.radius
+
+    z_bar_arr = Property(depends_on='+geo_input')
+    '''property: vertical distance of individual reinforcement bars from lower rim of cross section [m]
+    '''
+    def _get_z_bar_arr(self):
+        return np.sin(self.fi_bar_arr) * (self.radius - self.d_bars) + self.radius
 
     def plot_geometry(self, ax):
         '''Plot geometry'''
         fi_outline_arr = np.append(np.arange(0, 2 * np.pi, np.pi / 60, dtype=float), 0.0)
-        fi_bars_arr = np.arange(0, 2 * np.pi, 2 * np.pi / self.n_bars, dtype=float)
 
         ax.plot(np.cos(fi_outline_arr) * self.radius, np.sin(fi_outline_arr) * self.radius, color='blue')
-        ax.plot(np.cos(fi_bars_arr) * (self.radius - self.d_bars),
-                np.sin(fi_bars_arr) * (self.radius - self.d_bars), 'ro')
+        ax.plot(self.x_bar_arr - self.radius, self.z_bar_arr - self.radius, 'ro')
         ax.axis([-self.radius * 1.1, self.radius * 1.1, -self.radius * 1.1, self.radius * 1.1])
 
     view = View(HSplit(Group(
@@ -397,6 +467,7 @@ class ECBGeoCB(ECBCrossSectionGeo):
                 Group(Item('radius', springy=True),
                       Item('n_bars'),
                       Item('d_bars'),
+                      Item('A_bar'),
                       label='Geometry',
                       springy=True
                       ),
@@ -418,20 +489,7 @@ class ECBGeoCB(ECBCrossSectionGeo):
                 buttons=['OK', 'Cancel'])
 
 if __name__ == '__main__':
-    #ecs = ECBGeoRL(n_layers=4, height=0.2, width=0.1)
 
-    #ecs.configure_traits()
-    ecs = ECBGeoRB(height=0.3, width=0.2,
-                   bar_coords=[[0.0, 0.6],
-                               [0.2, 0.5]],
-                   bar_areas=[0.04, 0.05, 0.04]
-                   )
+    ecs = ECBGeoRI(width_up=0.8, width_lo=0.5)
 
     ecs.configure_traits()
-    #ecs = ECBGeoRI(height=0.6, width=0.6, height_lo = 0.1, height_up = 0.15, width_st = 0.08,
-    #               n_bars = 8, z_bars = 0.05, diameter_bar = 0.01)
-
-    #ecs.configure_traits()
-    #ecs = ECBGeoCB(radius = 0.3, n_bars = 12, d_bars = 0.05)
-
-    #ecs.configure_traits()
