@@ -78,11 +78,11 @@ class ECBCrossSection(HasStrictTraits):
     unit_conversion_factor = Constant(1000.0)
     '''Convert the MN to kN
     '''
-    
+
     x = Property(depends_on='+eps_input,geo.modified')
     '''Height of the compressive zone
     '''
-    
+
     def _get_x(self):
         if self.eps_up == self.eps_lo:
             # @todo: explain
@@ -90,12 +90,12 @@ class ECBCrossSection(HasStrictTraits):
         else:
             return (abs(self.eps_up) / (abs(self.eps_up - self.eps_lo)) *
                      self.geo.height)
-    
+
     n_cj = Int(30, auto_set=False, enter_set=True,
                  cc_input=True, eps_input=True)
     '''Number of subdivisions of the compressive zone
     '''
-    
+
     z_cj_arr = Property(depends_on='+eps_input,geo.modified')
     '''Discretizaton of the  compressive zone
     '''
@@ -124,7 +124,7 @@ class ECBCrossSection(HasStrictTraits):
         eps_j_arr = (self.eps_up + (self.eps_lo - self.eps_up) * self.z_cj_arr /
                      self.geo.height)
         return (-np.fabs(eps_j_arr) + eps_j_arr) / 2.0
-    
+
     sig_cj_arr = Property(depends_on='+eps_input, +cc_input, cc_modified')
     '''Stresses at the j-th integration point.
     '''
@@ -138,7 +138,7 @@ class ECBCrossSection(HasStrictTraits):
     @cached_property
     def _get_f_cj_arr(self):
         return self.w_cj_arr * self.sig_cj_arr * self.unit_conversion_factor
-    
+
     eps_bar_arr = Property(depends_on='+eps_input,geo.modified')
     '''Strain at the level of the i-th reinforcement bar
     '''
@@ -200,5 +200,5 @@ if __name__ == '__main__':
     print 'Moment for circular cross section with bar reinforcement', ecs.M
     print 'Normal force for circular cross section with bar reinforcement', ecs.N
 
-    #ecs.configure_traits()
+    ecs.configure_traits()
 
